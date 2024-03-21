@@ -47,5 +47,9 @@ def run():
     )
 
 
+
 if __name__ == "__main__":
     run()
+    conn = st.connection('db', type="sql")
+    df = conn.query('select * from data.financial_data;')
+    st.dataframe(df)
