@@ -9,15 +9,41 @@ To run this project locally, follow these steps:
 1. Clone the repository to your local machine.
 2. Ensure you have Python 3.11.8 installed.
 3. Install the required dependencies:
-    pip install -r requirements.txt
+    `pip install -r requirements.txt`
 4. Navigate to the project directory and run the application:
-    streamlit run app.py
+    `streamlit run app.py`
 
+
+## Handling Secrets
+
+The application may require access to sensitive information, such as API keys, database credentials, and other secrets. It is crucial to handle these securely and never commit them to your version control system.
+
+We recommend using environment variables or a secret management tool to manage your secrets. For development purposes, you can use a `.streamlit/secrets.toml` file to store your environment variables locally. **Never** commit this file to your repository by adding .streatmli to your .gitignore file.
+
+For example, to set up environment variables in a `.streamlit/secrets.tomal` file:
+
+```
+[connections.db]
+dialect = "mysql"
+username = "username"
+password = "password"
+host = "host"
+database = "database"
+```
+
+And access them in your application:
+
+```python
+import os
+
+db_username = os.getenv('DB_USERNAME')
+db_password = os.getenv('DB_PASSWORD')
+```
 
 ## Project Structure
 
 Below is the structure of the project, detailing the main components and their purposes:
-
+```
 spt-finance/
 │
 ├── app.py - Main Streamlit application entry point.
@@ -47,9 +73,7 @@ spt-finance/
 └── utils/
 ├── __init__.py
 └── helper_functions.py - Utility functions for common tasks.
-
-csharp
-Copy code
+```
 
 ## Contributing
 
