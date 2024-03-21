@@ -9,16 +9,16 @@ To run this project locally, follow these steps:
 1. Clone the repository to your local machine.
 2. Ensure you have Python 3.11.8 installed.
 3. Install the required dependencies:
-    `pip install -r requirements.txt`
+    ```pip install -r requirements.txt```
 4. Navigate to the project directory and run the application:
-    `streamlit run app.py`
+    ```streamlit run app.py```
 
 
 ## Handling Secrets
 
 The application may require access to sensitive information, such as API keys, database credentials, and other secrets. It is crucial to handle these securely and never commit them to your version control system.
 
-We recommend using environment variables or a secret management tool to manage your secrets. For development purposes, you can use a `.streamlit/secrets.toml` file to store your environment variables locally. **Never** commit this file to your repository by adding .streatmli to your .gitignore file.
+We recommend using environment variables or a secret management tool to manage your secrets. For development purposes, you can use a `.streamlit/secrets.toml` file to store your environment variables locally. **Never** commit this file to your repository by adding .streatmlit to your .gitignore file.
 
 For example, to set up environment variables in a `.streamlit/secrets.tomal` file:
 
@@ -29,15 +29,24 @@ username = "username"
 password = "password"
 host = "host"
 database = "database"
+
+# Everything in this section will be available as an environment variable
+db_username = "Jane"
+db_password = "mypassword"
 ```
 
 And access them in your application:
 
 ```python
-import os
+import streamlit as st
 
-db_username = os.getenv('DB_USERNAME')
-db_password = os.getenv('DB_PASSWORD')
+# Create the SQL connection to pets_db as specified in your secrets file.
+conn = st.connection('db', type='sql')
+
+# Everything is accessible via the st.secrets dict:
+st.secrets["db_username"]
+st.secrets["db_password"]
+
 ```
 
 ## Project Structure
