@@ -3,7 +3,7 @@ import textwrap
 from colorsys import hsv_to_rgb, rgb_to_hsv
 
 import streamlit as st
-
+import pandas as pd
 
 def show_code(demo):
     """Showing the code of the demo."""
@@ -45,3 +45,4 @@ def color_gradient(start_hex, finish_hex="#FFFFFF", n=10, alpha=1.0):
     rgba_tuples = [(rgb[0], rgb[1], rgb[2], alpha) for rgb in rgb_tuples]
     # Create a list of strings in the format "rgba(r, g, b, a)"
     return ["rgba({}, {}, {}, {})".format(rgba[0], rgba[1], rgba[2], rgba[3]) for rgba in rgba_tuples]
+

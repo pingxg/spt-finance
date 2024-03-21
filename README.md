@@ -20,7 +20,7 @@ The application may require access to sensitive information, such as API keys, d
 
 We recommend using environment variables or a secret management tool to manage your secrets. For development purposes, you can use a `.streamlit/secrets.toml` file to store your environment variables locally. **Never** commit this file to your repository by adding .streatmlit to your .gitignore file.
 
-For example, to set up environment variables in a `.streamlit/secrets.tomal` file:
+For example, to set up environment variables in a `.streamlit/secrets.toml` file:
 
 ```
 [connections.db]
