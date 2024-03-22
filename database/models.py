@@ -1,9 +1,8 @@
+import os
+from sqlalchemy.orm import relationship, sessionmaker, declarative_base
 from sqlalchemy import (
     Column, Integer, String, DECIMAL, Boolean, ForeignKey, create_engine
 )
-# from sqlalchemy.ext.declarative import 
-from sqlalchemy.orm import relationship, sessionmaker, declarative_base
-import os
 
 Base = declarative_base()
 
@@ -25,9 +24,9 @@ class Location(Base):
     basware_approver = Column(String(45))
     display_name = Column(String(45))
     po_number = Column(String(45))
-    department_id = Column(Integer, ForeignKey('master.department.id'))  # Foreign key reference to Department table
+    department_id = Column(Integer, ForeignKey('master.department.id'))
     class_id = Column(Integer)
-    active = Column(Boolean)  # TINYINT is often translated to Boolean
+    active = Column(Boolean)
     basware_matching = Column(String(45))
     customer_id = Column(Integer)
     maraplan_location_name = Column(String(45))
@@ -37,12 +36,12 @@ class Location(Base):
 
 class Department(Base):
     __tablename__ = 'department'
-    __table_args__ = {'schema': 'master'}  # This table is in the 'master' schema
+    __table_args__ = {'schema': 'master'}
 
     id = Column(Integer, primary_key=True)
     external_id = Column(String(45))
     name = Column(String(45))
-    active = Column(Boolean)  # TINYINT can typically be represented as a Boolean in ORMs
+    active = Column(Boolean)
 
 
 class FinancialAccount(Base):
@@ -65,17 +64,14 @@ class FinancialData(Base):
     __table_args__ = {'schema': 'data'}
 
     id = Column(Integer, primary_key=True)
-    account_id = Column(String(7), ForeignKey('master.financial_account.account_id'))  # Foreign key reference to FinancialAccount table
+    account_id = Column(String(7), ForeignKey('master.financial_account.account_id'))
     amount = Column(DECIMAL(15, 2))
     month = Column(Integer)
     year = Column(Integer)
-    location_id = Column(Integer, ForeignKey('master.location.id'))  # Foreign key reference to Location table
+    location_id = Column(Integer, ForeignKey('master.location.id'))
 
-    # Establish relationships with Location and FinancialAccount
-    # location = relationship('Location', back_populates='financial_data')
     financial_account = relationship('FinancialAccount', back_populates='financial_data')
 
-# FinancialAccount.financial_data = relationship('FinancialData', order_by=FinancialData.id, back_populates='financial_account')
 
 # Create an engine using the environment variable 'DB_URL'
 engine = create_engine(os.getenv('DB_URL', None))

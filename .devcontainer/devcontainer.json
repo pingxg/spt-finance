@@ -4,7 +4,6 @@
   "customizations": {
     "codespaces": {
       "openFiles": [
-        "README.md",
         "Overview.py"
       ]
     },
