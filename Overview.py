@@ -11,12 +11,10 @@ def run():
     st.set_page_config(
         page_title="Overview",
     )
-    st.write("# Spartao Financial Dashboard 📈")
+    st.write("# Financial Dashboard 📈")
 
 
 if __name__ == "__main__":
     run()
     with session_scope() as session:
-        department_names = [_.name for _ in session.query(Department).all()]
-        st.write(department_names)
         st.write([(_.account_id, _.account_name, _.account_type) for _ in session.query(FinancialAccount).all()])
