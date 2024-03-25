@@ -3,7 +3,7 @@ import textwrap
 from colorsys import hsv_to_rgb, rgb_to_hsv
 
 import streamlit as st
-import pandas as pd
+
 
 def show_code(demo):
     """Showing the code of the demo."""
@@ -16,7 +16,7 @@ def show_code(demo):
 
 
 
-def color_gradient(start_hex, finish_hex="#FFFFFF", n=10, alpha=1.0):
+def color_gradient(start_hex="#2E4748", finish_hex="#00C1CB", n=4, alpha=0.9):
     """ returns a gradient list of (n) colors between
     two hex colors. start_hex and finish_hex
     should be the full six-digit color string,

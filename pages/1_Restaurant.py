@@ -1,4 +1,5 @@
 from urllib.error import URLError
+from PIL import Image
 
 import pandas as pd
 import pydeck as pdk
@@ -89,7 +90,11 @@ def mapping_demo():
         )
 
 
-st.set_page_config(page_title="Restaurant")
+st.set_page_config(
+    page_title="Restaurant",
+    page_icon=Image.open("assets/logo.ico"),
+    layout='wide',
+    initial_sidebar_state='auto')
 st.markdown("# Restaurant Project")
 st.sidebar.header("Restaurant Project")
 st.write(

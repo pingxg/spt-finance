@@ -2,6 +2,7 @@ from urllib.error import URLError
 
 import altair as alt
 import pandas as pd
+from PIL import Image
 
 import streamlit as st
 from streamlit.hello.utils import show_code
@@ -50,7 +51,11 @@ def data_frame_demo():
         )
 
 
-st.set_page_config(page_title="Office")
+st.set_page_config(
+    page_title="Office",
+    page_icon=Image.open("assets/logo.ico"),
+    layout='wide',
+    initial_sidebar_state='auto')
 st.markdown("# Head Office")
 st.sidebar.header("Head Office")
 st.write(

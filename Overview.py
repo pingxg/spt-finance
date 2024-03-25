@@ -1,20 +1,28 @@
+from PIL import Image
 import streamlit as st
 from streamlit.logger import get_logger
 from database.session import session_scope
 from database.models import Department, Location, FinancialAccount
-
+from analytics.query import query_unique_timeframes
 
 LOGGER = get_logger(__name__)
 
 
-def run():
+
+if __name__ == "__main__":
     st.set_page_config(
         page_title="Overview",
+        page_icon=Image.open("assets/logo.ico"),
+        layout='wide',
+        initial_sidebar_state='auto'
     )
     st.write("# Financial Dashboard 📈")
 
-
-if __name__ == "__main__":
-    run()
     with session_scope() as session:
-        st.write([(_.account_id, _.account_name, _.account_type) for _ in session.query(FinancialAccount).all()])
+        data = [(_.account_id, _.account_name, _.account_type) for _ in session.query(FinancialAccount).all()]
+        st.write(data)
+        print(data)
+
+    st.write(query_unique_timeframes())
+    st.write(query_unique_timeframes('month'))
+    st.write(query_unique_timeframes('year'))
