@@ -5,3 +5,4 @@ SQLAlchemy==2.0.27
 mysqlclient
 mysql-connector-python
 plotly
+python-dotenv

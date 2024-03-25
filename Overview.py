@@ -18,11 +18,6 @@ if __name__ == "__main__":
     )
     st.write("# Financial Dashboard 📈")
 
-    with session_scope() as session:
-        data = [(_.account_id, _.account_name, _.account_type) for _ in session.query(FinancialAccount).all()]
-        st.write(data)
-        print(data)
-
     st.write(query_unique_timeframes())
     st.write(query_unique_timeframes('month'))
     st.write(query_unique_timeframes('year'))

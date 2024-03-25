@@ -33,8 +33,11 @@ st.set_page_config(
     page_title="Sushibar",
     page_icon=Image.open("assets/logo.ico"),
     layout='wide',
-    initial_sidebar_state='auto')
+    initial_sidebar_state='auto',
+)
+
 st.markdown("# Sushibar Project")
+
 st.sidebar.header("Sushibar Project")
 st.write(
     """This demo illustrates a combination of plotting and animation with

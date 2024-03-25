@@ -1,8 +1,11 @@
 import os
+from dotenv import load_dotenv
+
 from sqlalchemy.orm import relationship, sessionmaker, declarative_base
 from sqlalchemy import (
     Column, Integer, String, DECIMAL, Boolean, ForeignKey, create_engine
 )
+load_dotenv()
 
 Base = declarative_base()
 
@@ -11,24 +14,24 @@ class Location(Base):
     __table_args__ = {'schema': 'master'}
 
     id = Column(Integer, primary_key=True)
-    external_id = Column(String(45))
     name = Column(String(45))
+    store_name = Column(String(45))
     short_name = Column(String(45))
+    status = Column(String(45))
+    active = Column(Boolean)
+    department_id = Column(Integer, ForeignKey('master.department.id'))
+    class_id = Column(Integer)
+    basware_matching = Column(String(45))
+    basware_approver = Column(String(45))
+    customer_id = Column(Integer)
     op_manager_id = Column(Integer)
     store_manager_id = Column(Integer)
+    po_number = Column(String(45))
     email = Column(String(45))
     phone = Column(String(45))
     address = Column(String(45))
     post_code = Column(String(45))
     city = Column(String(45))
-    basware_approver = Column(String(45))
-    display_name = Column(String(45))
-    po_number = Column(String(45))
-    department_id = Column(Integer, ForeignKey('master.department.id'))
-    class_id = Column(Integer)
-    active = Column(Boolean)
-    basware_matching = Column(String(45))
-    customer_id = Column(Integer)
     maraplan_location_name = Column(String(45))
     
     department = relationship('Department', backref='locations')

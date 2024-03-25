@@ -29,7 +29,7 @@ def color_gradient(start_hex="#2E4748", finish_hex="#00C1CB", n=4, alpha=0.9):
     start_rgb = tuple(int(s[i:i+2], 16) for i in (1, 3, 5))
     finish_rgb = tuple(int(f[i:i+2], 16) for i in (1, 3, 5))
 
-    if n ==1:
+    if n == 1:
         return [f"rgba({start_rgb[0]}, {start_rgb[1]}, {start_rgb[2]}, {alpha})"]
     # Convert RGB to HSV
     start_hsv = rgb_to_hsv(*start_rgb)
