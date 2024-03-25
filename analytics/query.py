@@ -1,7 +1,10 @@
+import pandas as pd
 import streamlit as st
+from sqlalchemy import create_engine, and_, or_, func
+from sqlalchemy.orm import joinedload
 
 from database.session import session_scope
-from database.models import Department, Location, FinancialAccount,FinancialData
+from database.models import Department, Location, FinancialAccount, FinancialData
 
 REPORT_TYPE = {
     'standard': 'std_rate',
@@ -27,20 +30,71 @@ def query_unique_timeframes(timeframe='quarter'):
 
 
 @st.cache_data
-def query_performance_overview_data(department=None, report_type='standard', begin=None, end=None):
-    with session_scope() as session:
-        query = session.query(FinancialData)
-        if department is not None:
-            query = query.join(Location).filter(Location.department.has(name=department))
-        if begin is not None:
-            query = query.filter(FinancialData.year >= begin.year, FinancialData.month >= begin.month)
-        if end is not None:
-            query = query.filter(FinancialData.year <= end.year, FinancialData.month <= end.month)
-        data = query.all()
-        # Process and filter data according to report_type using REPORT_TYPE dict
-        # This might involve aggregating data or applying specific rate columns
-        return data
+def query_performance_overview_data(department_name=None, report_type='standard', start_str=None, end_str=None, timeframe="quarter"):
+    if 'q' in start_str.lower() or 'q' in end_str.lower():
+        timeframe = 'quarter'
+    elif 'm' in start_str.lower() or 'm' in end_str.lower():
+        timeframe = 'month'
+    else:
+        timeframe = 'year'
     
+    with session_scope() as session:
+        query = session.query(
+            FinancialData.year, 
+            FinancialData.month, 
+            FinancialData.location_id,
+            Location.short_name,
+            FinancialData.account_id, 
+            FinancialData.amount,
+            FinancialAccount.account_name,
+            FinancialAccount.account_type
+        ).join(
+            FinancialAccount, FinancialData.account_id == FinancialAccount.account_id
+        )
+        if report_type is not None:
+            ratio_column = REPORT_TYPE[report_type]
+            additional_column = getattr(FinancialAccount, ratio_column, None)
+            
+            if additional_column is not None:
+                query = query.add_columns(additional_column)
+            else:
+                raise ValueError(f"Column '{ratio_column}' not found in FinancialAccount model.")
+    
+        if department_name is not None:
+            query = query.join(Location).filter(Location.department.has(name=department_name))
+        
+        if start_str is not None:
+            if timeframe == "quarter":
+                query = query.filter(func.concat(FinancialData.year, '-Q', ((FinancialData.month - 1) // 3 + 1)) >= start_str)
+            elif timeframe == "month":
+                query = query.filter(func.concat(FinancialData.year, '-M', func.lpad(FinancialData.month, 2, '0')) >= start_str)
+            else:
+                query = query.filter(FinancialData.year >= start_str)
+        
+        if end_str is not None:
+            if timeframe == "quarter":
+                query = query.filter(func.concat(FinancialData.year, '-Q', ((FinancialData.month - 1) // 3 + 1)) <= end_str)
+            elif timeframe == "month":
+                query = query.filter(func.concat(FinancialData.year, '-M', func.lpad(FinancialData.month, 2, '0')) <= end_str)
+            else:
+                query = query.filter(FinancialData.year <= end_str)
+        
+        results = query.all()
+        
+        results_data = [{
+            'year': year,
+            'month': month,
+            'location_id': location_id,
+            'location_name': short_name,
+            'account_id': account_id,
+            'amount': amount,
+            'account_name': account_name,
+            'account_type': account_type,
+            report_type: ratio_column,
+        } for year, month, location_id, short_name, account_id, amount, account_name, account_type, ratio_column in results]
+    
+    return pd.DataFrame(results_data)
+
 @st.cache_data
 def query_cost_structure_data():
     ...
@@ -51,7 +105,6 @@ def prepare_performance_overview_data():
 
 @st.cache_data
 def prepare_cost_structure_data():
-
     ...
 
 
