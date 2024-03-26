@@ -6,3 +6,4 @@ mysqlclient
 mysql-connector-python
 plotly
 python-dotenv
+Jinja2==3.1.3

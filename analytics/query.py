@@ -12,7 +12,7 @@ REPORT_TYPE = {
     'adjusted_coef': 'adj_coef_rate',
 }
 
-@st.cache_data
+@st.cache_data(ttl=600)
 def query_unique_timeframes(timeframe='quarter'):
     with session_scope() as session:
         if timeframe == 'quarter':
@@ -29,7 +29,7 @@ def query_unique_timeframes(timeframe='quarter'):
             return sorted(years)
 
 
-@st.cache_data
+@st.cache_data(ttl=600)
 def query_performance_overview_data(department_name=None, report_type='standard', start_str=None, end_str=None, timeframe="quarter"):
     if 'q' in start_str.lower() or 'q' in end_str.lower():
         timeframe = 'quarter'
@@ -43,13 +43,18 @@ def query_performance_overview_data(department_name=None, report_type='standard'
             FinancialData.year, 
             FinancialData.month, 
             FinancialData.location_id,
-            Location.short_name,
+            Location.short_name.label('location_name'),
+            Department.name.label('department_name'),
             FinancialData.account_id, 
             FinancialData.amount,
             FinancialAccount.account_name,
             FinancialAccount.account_type
         ).join(
             FinancialAccount, FinancialData.account_id == FinancialAccount.account_id
+        ).join(
+            Location, FinancialData.location_id == Location.id
+        ).join(
+            Department, Location.department_id == Department.id
         )
         if report_type is not None:
             ratio_column = REPORT_TYPE[report_type]
@@ -61,7 +66,8 @@ def query_performance_overview_data(department_name=None, report_type='standard'
                 raise ValueError(f"Column '{ratio_column}' not found in FinancialAccount model.")
     
         if department_name is not None:
-            query = query.join(Location).filter(Location.department.has(name=department_name))
+            # query = query.join(Location).filter(Location.department.has(name=department_name))
+            query = query.filter(Location.department.has(name=department_name))
         
         if start_str is not None:
             if timeframe == "quarter":
@@ -85,25 +91,26 @@ def query_performance_overview_data(department_name=None, report_type='standard'
             'year': year,
             'month': month,
             'location_id': location_id,
-            'location_name': short_name,
+            'location_name': location_name,
+            'department_name': department_name,
             'account_id': account_id,
             'amount': amount,
             'account_name': account_name,
             'account_type': account_type,
-            report_type: ratio_column,
-        } for year, month, location_id, short_name, account_id, amount, account_name, account_type, ratio_column in results]
+            'rate': ratio_column,
+        } for year, month, location_id, location_name, department_name, account_id, amount, account_name, account_type, ratio_column in results]
     
     return pd.DataFrame(results_data)
 
-@st.cache_data
+@st.cache_data(ttl=600)
 def query_cost_structure_data():
     ...
 
-@st.cache_data
+@st.cache_data(ttl=600)
 def prepare_performance_overview_data():
     ...
 
-@st.cache_data
+@st.cache_data(ttl=600)
 def prepare_cost_structure_data():
     ...
 
