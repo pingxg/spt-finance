@@ -12,25 +12,29 @@ REPORT_TYPE = {
     'adjusted_coef': 'adj_coef_rate',
 }
 
-@st.cache_data(ttl=600)
+# @st.cache_data(ttl=600)
 def query_unique_timeframes(timeframe='quarter'):
+    timeframe = timeframe.lower()
     with session_scope() as session:
         if timeframe == 'quarter':
             results = session.query(FinancialData.year, FinancialData.month).distinct().all()
             quarters = set(f"{year}-Q{(month - 1) // 3 + 1}" for year, month in results)
-            return sorted(quarters)
+            # return sorted(quarters)
+            return [i for i in sorted(quarters)]
         elif timeframe == 'month':
             results = session.query(FinancialData.year, FinancialData.month).distinct().all()
             months = set(f"{year}-M{str(month).zfill(2)}" for year, month in results)
-            return sorted(months)
+            return [i for i in sorted(months)]
         elif timeframe == 'year':
             results = session.query(FinancialData.year).distinct().all()
             years = set(results)
-            return sorted(years)
+            return [str(i[0]) for i in sorted(years)]
 
 
 @st.cache_data(ttl=600)
 def query_performance_overview_data(department_name=None, report_type='standard', start_str=None, end_str=None, timeframe="quarter"):
+    report_type = report_type.lower()
+    timeframe = timeframe.lower()
     if 'q' in start_str.lower() or 'q' in end_str.lower():
         timeframe = 'quarter'
     elif 'm' in start_str.lower() or 'm' in end_str.lower():

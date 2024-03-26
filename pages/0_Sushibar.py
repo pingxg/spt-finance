@@ -1,32 +1,6 @@
-import time
 from PIL import Image
-
-import numpy as np
-
 import streamlit as st
-from streamlit.hello.utils import show_code
-
-
-def plotting_demo():
-    progress_bar = st.sidebar.progress(0)
-    status_text = st.sidebar.empty()
-    last_rows = np.random.randn(1, 1)
-    chart = st.line_chart(last_rows)
-
-    for i in range(1, 101):
-        new_rows = last_rows[-1, :] + np.random.randn(5, 1).cumsum(axis=0)
-        status_text.text("%i%% Complete" % i)
-        chart.add_rows(new_rows)
-        progress_bar.progress(i)
-        last_rows = new_rows
-        time.sleep(0.05)
-
-    progress_bar.empty()
-
-    # Streamlit widgets automatically run the script from top to bottom. Since
-    # this button is not connected to any other logic, it just causes a plain
-    # rerun.
-    st.button("Re-run")
+from analytics.query import query_unique_timeframes, query_performance_overview_data
 
 
 st.set_page_config(
@@ -37,14 +11,36 @@ st.set_page_config(
 )
 
 st.markdown("# Sushibar Project")
-
 st.sidebar.header("Sushibar Project")
-st.write(
-    """This demo illustrates a combination of plotting and animation with
-Streamlit. We're generating a bunch of random numbers in a loop for around
-5 seconds. Enjoy!"""
+
+
+# The `on_change` callback is correctly defined without calling it
+timeframe = st.sidebar.radio(
+    label="Select timeframe:",
+    options=["Month", "Quarter", "Year"],
+    index=1,
+    key="timeframe",
+    horizontal=True,
+)
+period_str_list = query_unique_timeframes(timeframe)
+start_str = st.sidebar.selectbox(label="Start", options=period_str_list, index=len(period_str_list)-3, key="start_str")
+end_str = st.sidebar.selectbox(label="End", options=period_str_list, index=len(period_str_list)-1, key="end_str")
+if start_str > end_str:
+    st.toast("Wrong period selected!", icon="🚨")
+if "2020" in start_str or "2020" in end_str or "2021" in start_str or "2021" in end_str:
+    st.toast("2020 and 2021 data cannot be splited by cost center!", icon="ℹ️")
+
+report_type = st.sidebar.radio(
+    label="Select report type:",
+    options=["Standard", "Adjusted_coef"],
+    index=0,
+    key="report_type",
 )
 
-plotting_demo()
+st.sidebar.toggle("Split office cost", value=False, key="split_office_cost")
 
-show_code(plotting_demo)
+search_btn = st.sidebar.button("Search")
+if search_btn:
+    # Assuming you have a function to query data based on these parameters
+    df = query_performance_overview_data(department_name="food kiosk sushibar",start_str=start_str, end_str=end_str, report_type=report_type)
+    st.dataframe(df, use_container_width=True, hide_index=True)

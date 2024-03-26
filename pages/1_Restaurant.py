@@ -5,89 +5,7 @@ import pandas as pd
 import pydeck as pdk
 
 import streamlit as st
-from streamlit.hello.utils import show_code
-
-
-def mapping_demo():
-    @st.cache_data
-    def from_data_file(filename):
-        url = (
-            "https://raw.githubusercontent.com/streamlit/"
-            "example-data/master/hello/v1/%s" % filename
-        )
-        return pd.read_json(url)
-
-    try:
-        ALL_LAYERS = {
-            "Bike Rentals": pdk.Layer(
-                "HexagonLayer",
-                data=from_data_file("bike_rental_stats.json"),
-                get_position=["lon", "lat"],
-                radius=200,
-                elevation_scale=4,
-                elevation_range=[0, 1000],
-                extruded=True,
-            ),
-            "Bart Stop Exits": pdk.Layer(
-                "ScatterplotLayer",
-                data=from_data_file("bart_stop_stats.json"),
-                get_position=["lon", "lat"],
-                get_color=[200, 30, 0, 160],
-                get_radius="[exits]",
-                radius_scale=0.05,
-            ),
-            "Bart Stop Names": pdk.Layer(
-                "TextLayer",
-                data=from_data_file("bart_stop_stats.json"),
-                get_position=["lon", "lat"],
-                get_text="name",
-                get_color=[0, 0, 0, 200],
-                get_size=10,
-                get_alignment_baseline="'bottom'",
-            ),
-            "Outbound Flow": pdk.Layer(
-                "ArcLayer",
-                data=from_data_file("bart_path_stats.json"),
-                get_source_position=["lon", "lat"],
-                get_target_position=["lon2", "lat2"],
-                get_source_color=[200, 30, 0, 160],
-                get_target_color=[200, 30, 0, 160],
-                auto_highlight=True,
-                width_scale=0.0001,
-                get_width="outbound",
-                width_min_pixels=3,
-                width_max_pixels=30,
-            ),
-        }
-        st.sidebar.markdown("### Map Layers")
-        selected_layers = [
-            layer
-            for layer_name, layer in ALL_LAYERS.items()
-            if st.sidebar.checkbox(layer_name, True)
-        ]
-        if selected_layers:
-            st.pydeck_chart(
-                pdk.Deck(
-                    map_style=None,
-                    initial_view_state={
-                        "latitude": 37.76,
-                        "longitude": -122.4,
-                        "zoom": 11,
-                        "pitch": 50,
-                    },
-                    layers=selected_layers,
-                )
-            )
-        else:
-            st.error("Please choose at least one layer above.")
-    except URLError as e:
-        st.error(
-            """
-            **This demo requires internet access.**
-            Connection error: %s
-        """
-            % e.reason
-        )
+from analytics.query import query_unique_timeframes, query_performance_overview_data
 
 
 st.set_page_config(
@@ -97,12 +15,36 @@ st.set_page_config(
     initial_sidebar_state='auto')
 st.markdown("# Restaurant Project")
 st.sidebar.header("Restaurant Project")
-st.write(
-    """This demo shows how to use
-[`st.pydeck_chart`](https://docs.streamlit.io/library/api-reference/charts/st.pydeck_chart)
-to display geospatial data."""
+
+# The `on_change` callback is correctly defined without calling it
+timeframe = st.sidebar.radio(
+    label="Select timeframe:",
+    options=["Month", "Quarter", "Year"],
+    index=1,
+    key="timeframe",
+    horizontal=True,
 )
 
-mapping_demo()
+period_str_list = query_unique_timeframes(timeframe)
+start_str = st.sidebar.selectbox(label="Start", options=period_str_list, index=len(period_str_list)-3, key="start_str")
+end_str = st.sidebar.selectbox(label="End", options=period_str_list, index=len(period_str_list)-1, key="end_str")
 
-show_code(mapping_demo)
+if start_str > end_str:
+    st.toast("Wrong period selected!", icon="🚨")
+if "2020" in start_str or "2020" in end_str or "2021" in start_str or "2021" in end_str:
+    st.toast("2020 and 2021 data cannot be splited by cost center!", icon="ℹ️")
+
+report_type = st.sidebar.radio(
+    label="Select report type:",
+    options=["Standard", "Adjusted_coef"],
+    index=0,
+    key="report_type",
+)
+
+st.sidebar.toggle("Split office cost", value=False, key="split_office_cost")
+
+search_btn = st.sidebar.button("Search")
+if search_btn:
+    # Assuming you have a function to query data based on these parameters
+    df = query_performance_overview_data(department_name="restaurant",start_str=start_str, end_str=end_str, report_type=report_type)
+    st.dataframe(df, use_container_width=True, hide_index=True)

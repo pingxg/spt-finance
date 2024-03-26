@@ -1,54 +1,7 @@
-from urllib.error import URLError
 
-import altair as alt
-import pandas as pd
 from PIL import Image
-
 import streamlit as st
-from streamlit.hello.utils import show_code
-
-
-def data_frame_demo():
-    @st.cache_data
-    def get_UN_data():
-        AWS_BUCKET_URL = "https://streamlit-demo-data.s3-us-west-2.amazonaws.com"
-        df = pd.read_csv(AWS_BUCKET_URL + "/agri.csv.gz")
-        return df.set_index("Region")
-
-    try:
-        df = get_UN_data()
-        countries = st.multiselect(
-            "Choose countries", list(df.index), ["China", "United States of America"]
-        )
-        if not countries:
-            st.error("Please select at least one country.")
-        else:
-            data = df.loc[countries]
-            data /= 1000000.0
-            st.write("### Gross Agricultural Production ($B)", data.sort_index())
-
-            data = data.T.reset_index()
-            data = pd.melt(data, id_vars=["index"]).rename(
-                columns={"index": "year", "value": "Gross Agricultural Product ($B)"}
-            )
-            chart = (
-                alt.Chart(data)
-                .mark_area(opacity=0.3)
-                .encode(
-                    x="year:T",
-                    y=alt.Y("Gross Agricultural Product ($B):Q", stack=None),
-                    color="Region:N",
-                )
-            )
-            st.altair_chart(chart, use_container_width=True)
-    except URLError as e:
-        st.error(
-            """
-            **This demo requires internet access.**
-            Connection error: %s
-        """
-            % e.reason
-        )
+from analytics.query import query_unique_timeframes, query_performance_overview_data
 
 
 st.set_page_config(
@@ -58,11 +11,33 @@ st.set_page_config(
     initial_sidebar_state='auto')
 st.markdown("# Factory Project")
 st.sidebar.header("Factory Project")
-st.write(
-    """This demo shows how to use `st.write` to visualize Pandas DataFrames.
-(Data courtesy of the [UN Data Explorer](http://data.un.org/Explorer.aspx).)"""
+
+timeframe = st.sidebar.radio(
+    label="Select timeframe:",
+    options=["Month", "Quarter", "Year"],
+    index=1,
+    key="timeframe",
+    horizontal=True,
+)
+period_str_list = query_unique_timeframes(timeframe)
+start_str = st.sidebar.selectbox(label="Start", options=period_str_list, index=len(period_str_list)-3, key="start_str")
+end_str = st.sidebar.selectbox(label="End", options=period_str_list, index=len(period_str_list)-1, key="end_str")
+if start_str > end_str:
+    st.toast("Wrong period selected!", icon="🚨")
+if "2020" in start_str or "2020" in end_str or "2021" in start_str or "2021" in end_str:
+    st.toast("2020 and 2021 data cannot be splited by cost center!", icon="ℹ️")
+
+report_type = st.sidebar.radio(
+    label="Select report type:",
+    options=["Standard", "Adjusted_coef"],
+    index=0,
+    key="report_type",
 )
 
-data_frame_demo()
+st.sidebar.toggle("Split office cost", value=False, key="split_office_cost")
 
-show_code(data_frame_demo)
+search_btn = st.sidebar.button("Search")
+if search_btn:
+    # Assuming you have a function to query data based on these parameters
+    df = query_performance_overview_data(department_name="food plant",start_str=start_str, end_str=end_str, report_type=report_type)
+    st.dataframe(df, use_container_width=True, hide_index=True)
