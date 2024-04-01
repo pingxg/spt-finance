@@ -10,6 +10,8 @@ LOGGER = get_logger(__name__)
 
 
 def main():
+    DEPARTMENT_NAME = None
+
     # The `on_change` callback is correctly defined without calling it
     timeframe = st.sidebar.radio(
         label="Select timeframe:",
@@ -48,19 +50,20 @@ def main():
         help=(
             "Making the following adjustments for easier interpretation:\n"
             "- Norwegian krone exchange rate: 10 NOK = 1 EUR\n"
-            "- Outsourced sushibar's other external services changed to staff cost"
+            "- Outsourced sushibar's other external services changed to staff cost\n"
             "- The restaurant rental income is offset by the rent expense\n"
             "- The restaurant section only records sales of directly operated stores and franchise fees\n"
-            "- Gas expenses and business trip allowances in the restaurant are counted as part of the salary\n"
+            "- Mileage and daily allowances in the restaurant are counted as part of the salary\n"
             "- Factory hot meal modification, costs are charged to the sushibar, sales are added to the factory\n"
             "- Factory's S-card purchase correction to fuel expenses\n"
             "- Factory's other external services changed to staff cost\n"
+            "- Mileage and daily allowances in the Factory are counted as part of the salary\n"
             "- Internal company admin transfer fee modification\n"
             "- Modify the unallocated records\n"
         ),
     )
 
-    st.sidebar.toggle(
+    split_office_cost = st.sidebar.toggle(
         "Split office cost",
         value=False,
         key="split_office_cost",
@@ -75,14 +78,57 @@ def main():
     search_btn = st.sidebar.button("Search")
 
     if search_btn:
-        po_tab1, po_tab2 = st.tabs(["Figure", "Data"])
-        df = prepare_performance_overview_data(start_str=start_str, end_str=end_str, report_type=report_type)
-        with po_tab1:
-            st.plotly_chart(make_performance_overview_graph(df), use_container_width=True)
-        with po_tab2:
-            st.dataframe(df, use_container_width=True, hide_index=True)
+        df = query_performance_overview_data(
+            department_name=DEPARTMENT_NAME,
+            report_type=report_type,
+            start_str=start_str,
+            end_str=end_str,
+            timeframe=timeframe,
+            custom_adjustment=custom_adjustment,
+            split_office_cost=split_office_cost,
+        )
+        
+        st.subheader('Group Performance Analysis')
+        po_fig_tab, po_data_tab = st.tabs(["Figure", "Data"])
+        po_df = prepare_performance_overview_data(df, denominator="sales")
+        with po_fig_tab:
+            st.plotly_chart(make_performance_overview_graph(po_df), use_container_width=True)
+        with po_data_tab:
+            st.dataframe(po_df, use_container_width=True, hide_index=True)
 
+        st.subheader('Group Turnover Breakdown')
+        ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
+        ts_df = prepare_turnover_structure_data(df)
+        with ts_fig_tab:
+            st.plotly_chart(make_turnover_structure_graph(ts_df), use_container_width=True)
+        with ts_data_tab:
+            st.dataframe(ts_df, use_container_width=True, hide_index=True)
 
+        st.subheader('Group Cost Structure')
+        cs_fig1_tab, cs_fig2_tab, cs_data_tab = st.tabs(["Cost to Sales Ratio", "Cost to Total Cost Ratio", "Data"])
+        
+        with cs_fig1_tab:
+            cs_df = prepare_performance_overview_data(df, denominator="sales")
+            st.plotly_chart(make_cost_structure_graph(cs_df, denominator="sales"), use_container_width=True)
+        with cs_fig2_tab:
+            cs_df = prepare_performance_overview_data(df, denominator="costs")
+            st.plotly_chart(make_cost_structure_graph(cs_df, denominator="costs"), use_container_width=True)
+        with cs_data_tab:
+            st.dataframe(cs_df, use_container_width=True, hide_index=True)
+
+        st.subheader('Group Cost Details')
+        cdd_fig1_tab, cdd_fig2_tab, cdd_fig3_tab, cdd_data_tab = st.tabs(["Cost Breakdown by Department", "Cumulative Cost Percentage", "Cumulative Cost Details Breakdown", "Data"])
+        cdd_df = df.copy()
+        with cdd_fig1_tab:
+            st.plotly_chart(make_cost_structure_breakdown_by_department_graph(cdd_df), use_container_width=True)
+        with cdd_fig2_tab:
+            results = prepare_cost_structure_cumulative(cdd_df)
+            st.plotly_chart(make_cost_structure_cumulative_by_department_graph(results), use_container_width=True)
+        with cdd_fig3_tab:
+            processed_df = prepare_cost_structure_cumulative_icicle(cdd_df)
+            st.plotly_chart(make_cost_structure_cumulative_icicle_graph(processed_df), use_container_width=True)
+        with cdd_data_tab:
+            st.dataframe(cdd_df, use_container_width=True, hide_index=True)
 
 
 if __name__ == "__main__":
@@ -93,7 +139,6 @@ if __name__ == "__main__":
         initial_sidebar_state='auto',
     )
     st.write("# Financial Dashboard 📈")
-    st.divider()
     st.sidebar.header("Overview")
 
     main()

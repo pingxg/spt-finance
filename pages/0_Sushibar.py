@@ -11,8 +11,8 @@ st.set_page_config(
     initial_sidebar_state='auto',
 )
 
+DEPARTMENT_NAME = 'FOOD KIOSK SUSHIBAR'
 st.markdown("# Sushibar Project")
-st.divider()
 
 st.sidebar.header("Sushibar Project")
 
@@ -54,19 +54,13 @@ custom_adjustment = st.sidebar.toggle(
     help=(
         "Making the following adjustments for easier interpretation:\n"
         "- Norwegian krone exchange rate: 10 NOK = 1 EUR\n"
-        "- Outsourced sushibar's other external services changed to staff cost"
-        "- The restaurant rental income is offset by the rent expense\n"
-        "- The restaurant section only records sales of directly operated stores and franchise fees\n"
-        "- Gas expenses and business trip allowances in the restaurant are counted as part of the salary\n"
-        "- Factory hot meal modification, costs are charged to the sushibar, sales are added to the factory\n"
-        "- Factory's S-card purchase correction to fuel expenses\n"
-        "- Factory's other external services changed to staff cost\n"
+        "- Outsourced sushibar's other external services changed to staff cost\n"
         "- Internal company admin transfer fee modification\n"
         "- Modify the unallocated records\n"
     ),
 )
 
-st.sidebar.toggle(
+split_office_cost = st.sidebar.toggle(
     "Split office cost",
     value=False,
     key="split_office_cost",
@@ -81,9 +75,20 @@ st.sidebar.toggle(
 search_btn = st.sidebar.button("Search")
 
 if search_btn:
+    df = query_performance_overview_data(
+        department_name=DEPARTMENT_NAME,
+        report_type=report_type,
+        start_str=start_str,
+        end_str=end_str,
+        timeframe=timeframe,
+        custom_adjustment=custom_adjustment,
+        split_office_cost=split_office_cost,
+    )
+    
+    st.subheader('Sushibar performance analysis')
     po_tab1, po_tab2 = st.tabs(["Figure", "Data"])
-    df = prepare_performance_overview_data(department_name="food kiosk sushibar", start_str=start_str, end_str=end_str, report_type=report_type)
+    po_df = prepare_performance_overview_data(df)
     with po_tab1:
-        st.plotly_chart(make_performance_overview_graph(df), use_container_width=True)
+        st.plotly_chart(make_performance_overview_graph(po_df), use_container_width=True)
     with po_tab2:
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(po_df, use_container_width=True, hide_index=True)

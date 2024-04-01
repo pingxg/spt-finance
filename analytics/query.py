@@ -1,7 +1,6 @@
 import pandas as pd
 import streamlit as st
 from sqlalchemy import create_engine, and_, or_, func
-from sqlalchemy.orm import joinedload
 from datetime import datetime
 from database.session import session_scope
 from database.models import Department, Location, FinancialAccount, FinancialData
@@ -43,6 +42,7 @@ def generate_period_str(df, timeframe):
         df['period'] = df['year'].astype(str) + '-M' + df['month'].apply(lambda x: f'{x:02d}')
     else:
         raise ValueError("Invalid timeframe specified. Use 'year', 'quarter', or 'month'.")
+    df['year_month'] = df['year'].astype(str) + '-M' + df['month'].apply(lambda x: f'{x:02d}')
     df = df.drop(columns=['year', 'month'])
     return df
 
@@ -66,7 +66,7 @@ def format_date_by_timeframe(timeframe):
 
 
 @st.cache_data(ttl=600)
-def query_performance_overview_data(department_name=None, report_type='standard', start_str=None, end_str=None, timeframe="quarter"):
+def query_performance_overview_data(department_name=None, report_type='standard', start_str=None, end_str=None, timeframe="quarter", custom_adjustment=True, split_office_cost=False):
     report_type = report_type.lower()
     timeframe = timeframe.lower()
     if 'q' in start_str.lower() or 'q' in end_str.lower():
@@ -104,7 +104,11 @@ def query_performance_overview_data(department_name=None, report_type='standard'
                 raise ValueError(f"Column '{ratio_column}' not found in FinancialAccount model.")
     
         if department_name is not None:
-            query = query.filter(Location.department.has(name=department_name))
+            if not split_office_cost:
+                query = query.filter(Location.department.has(name=department_name))
+            else:
+                # don't filter the department here
+                pass
         
         if start_str is not None:
             if timeframe == "quarter":
@@ -134,22 +138,33 @@ def query_performance_overview_data(department_name=None, report_type='standard'
             'account_name': account_name,
             'account_type': account_type,
             'rate': ratio_column,
-
         } for year, month, location_id, location_name, department_name, account_id, amount, account_name, account_type, ratio_column in results]
+
     df = pd.DataFrame(results_data)
-    df_with_period_str = generate_period_str(df, timeframe)
-    return df_with_period_str
+    result_df = generate_period_str(df, timeframe)
+    if custom_adjustment:
+        result_df = financial_data_custom_adjustment(result_df)
+    if split_office_cost:
+        result_df = office_cost_adjustment(result_df)
+    return result_df
 
 @st.cache_data(ttl=600)
-def query_cost_structure_data():
-    ...
+def financial_data_custom_adjustment(df):
+    df = df.copy()
+    return df
 
 @st.cache_data(ttl=600)
-def prepare_performance_overview_data(department_name=None, report_type='standard', start_str=None, end_str=None, timeframe="quarter"):
-    df = query_performance_overview_data(department_name=department_name, report_type=report_type, start_str=start_str, end_str=end_str, timeframe=timeframe)
+def office_cost_adjustment(df):
+    df = df.copy()
+    return df
+
+
+@st.cache_data(ttl=600)
+def prepare_performance_overview_data(df, denominator="sales"):
+    df = df.copy()
     df['amount_calc'] = df['amount'] * df['rate']
     df_grouped = df.groupby(['period'])['amount_calc'].sum().reset_index().sort_values(by=['period'], kind='mergesort', ascending=[True])
-    df_grouped_sales = df.loc[df['account_type']=="sales"].groupby(['period'])['amount_calc'].sum().reset_index().sort_values(by=['period'], kind='mergesort', ascending=[True])
+    df_grouped_sales = df.loc[df['account_type'].isin(["sales", "other income"])].groupby(['period'])['amount_calc'].sum().reset_index().sort_values(by=['period'], kind='mergesort', ascending=[True])
     df_grouped_material = df.loc[df['account_type']=="material"].groupby(['period'])['amount_calc'].sum().reset_index().sort_values(by=['period'], kind='mergesort', ascending=[True])
     df_grouped_staff = df.loc[df['account_type']=="staff"].groupby(['period'])['amount_calc'].sum().reset_index().sort_values(by=['period'], kind='mergesort', ascending=[True])
     df_grouped_other = df.loc[df['account_type']=="other cost"].groupby(['period'])['amount_calc'].sum().reset_index().sort_values(by=['period'], kind='mergesort', ascending=[True])
@@ -157,15 +172,81 @@ def prepare_performance_overview_data(department_name=None, report_type='standar
     df_grouped = pd.merge(df_grouped, df_grouped_material, on="period", validate="1:1",how='left',suffixes=(None,'_material'))
     df_grouped = pd.merge(df_grouped, df_grouped_staff, on="period", validate="1:1",how='left',suffixes=(None,'_staff'))
     df_grouped = pd.merge(df_grouped, df_grouped_other, on="period", validate="1:1",how='left',suffixes=(None,'_other'))
-    df_grouped['material_rate'] = (df_grouped['amount_calc_material']/df_grouped['amount_calc_sales']).abs()
-    df_grouped['staff_rate']= (df_grouped['amount_calc_staff']/df_grouped['amount_calc_sales']).abs()
-    df_grouped['other_rate']= (df_grouped['amount_calc_other']/df_grouped['amount_calc_sales']).abs()
+    if denominator == "sales":
+        df_grouped['material_rate'] = (df_grouped['amount_calc_material']/df_grouped['amount_calc_sales']).abs()
+        df_grouped['staff_rate']= (df_grouped['amount_calc_staff']/df_grouped['amount_calc_sales']).abs()
+        df_grouped['other_rate']= (df_grouped['amount_calc_other']/df_grouped['amount_calc_sales']).abs()
+    elif denominator == "costs":
+        df_grouped['material_rate'] = (df_grouped['amount_calc_material']/(df_grouped['amount_calc_material']+df_grouped['amount_calc_staff']+df_grouped['amount_calc_other'])).abs()
+        df_grouped['staff_rate']= (df_grouped['amount_calc_staff']/(df_grouped['amount_calc_material']+df_grouped['amount_calc_staff']+df_grouped['amount_calc_other'])).abs()
+        df_grouped['other_rate']= (df_grouped['amount_calc_other']/(df_grouped['amount_calc_material']+df_grouped['amount_calc_staff']+df_grouped['amount_calc_other'])).abs()
     df_grouped['profit_rate']= (df_grouped['amount_calc']/df_grouped['amount_calc_sales'])
     df_grouped.fillna(0,inplace=True)
     return df_grouped
 
 @st.cache_data(ttl=600)
-def prepare_cost_structure_data():
-    ...
+def prepare_turnover_structure_data(df):
+    df = df.copy()
+    df['amount_calc'] = df['amount'] * df['rate']
+    df_grouped_sales = df.loc[df['account_type'].isin(["sales", "other income"])].groupby(['period', 'department_name'])['amount_calc'].sum().reset_index().sort_values(by=['period','amount_calc'], kind='mergesort', ascending=[True, False])
+    # Pivoting the data with 'period' as index, 'location' as columns, and 'amount' as values
+    pivot_df = df_grouped_sales.pivot_table(index='period', columns='department_name', values='amount_calc', aggfunc='sum')
+    pivot_df.reset_index(inplace=True)  # Resetting the index if you want 'period' as a column
+    return pivot_df
+
+@st.cache_data(ttl=600)
+def prepare_cost_structure_breakdown(df, department_name=None):
+    df = df.copy()
+    if department_name is not None:
+        df = df.loc[df['department_name']==department_name]
+    result_df = prepare_performance_overview_data(df, denominator="sales")
+    return result_df
 
 
+@st.cache_data(ttl=600)
+def prepare_cost_structure_cumulative(df):
+    results = {}
+    df = df.copy()
+    results['departments'] = sorted(df['department_name'].unique().tolist())
+    df['amount_calc'] = df['amount'] * df['rate']
+    df_costs = df.loc[~df['account_type'].isin(["sales", "other income"])]
+    results['total_cost'] = df_costs['amount_calc'].sum()
+
+    results['total_cost'] = float(df_costs['amount_calc'].sum())
+    results['total_material_cost'] = float(df_costs[df_costs['account_type'] == 'material']['amount_calc'].sum())
+    results['total_staff_cost'] = float(df_costs[df_costs['account_type'] == 'staff']['amount_calc'].sum())
+    results['total_other_cost'] = float(df_costs[df_costs['account_type'] == 'other cost']['amount_calc'].sum())
+    results['total_sushibar_cost'] = float(df_costs[df_costs['department_name'] == 'Food Kiosk Sushibar']['amount_calc'].sum())
+    results['total_plant_cost'] = float(df_costs[df_costs['department_name'] == 'Food Plant']['amount_calc'].sum())
+    results['total_restaurant_cost'] = float(df_costs[df_costs['department_name'] == 'Restaurant']['amount_calc'].sum())
+    results['total_office_cost'] = float(df_costs[df_costs['department_name'] == 'Head Office']['amount_calc'].sum())
+    
+    results['total_sushibar_material'] = float(df_costs[(df_costs['account_type'] == 'material') & (df_costs['department_name'] == "Food Kiosk Sushibar")]['amount_calc'].sum())
+    results['total_sushibar_staff'] = float(df_costs[(df_costs['account_type'] == 'staff') & (df_costs['department_name'] == "Food Kiosk Sushibar")]['amount_calc'].sum())
+    results['total_sushibar_other'] = float(df_costs[(df_costs['account_type'] == 'other cost') & (df_costs['department_name'] == "Food Kiosk Sushibar")]['amount_calc'].sum())
+
+    results['total_plant_material'] = float(df_costs[(df_costs['account_type'] == 'material') & (df_costs['department_name'] == "Food Plant")]['amount_calc'].sum())
+    results['total_plant_staff'] = float(df_costs[(df_costs['account_type'] == 'staff') & (df_costs['department_name'] == "Food Plant")]['amount_calc'].sum())
+    results['total_plant_other'] = float(df_costs[(df_costs['account_type'] == 'other cost') & (df_costs['department_name'] == "Food Plant")]['amount_calc'].sum())
+
+    results['total_restaurant_material'] = float(df_costs[(df_costs['account_type'] == 'material') & (df_costs['department_name'] == "Restaurant")]['amount_calc'].sum())
+    results['total_restaurant_staff'] = float(df_costs[(df_costs['account_type'] == 'staff') & (df_costs['department_name'] == "Restaurant")]['amount_calc'].sum())
+    results['total_restaurant_other'] = float(df_costs[(df_costs['account_type'] == 'other cost') & (df_costs['department_name'] == "Restaurant")]['amount_calc'].sum())
+
+    results['total_office_material'] = float(df_costs[(df_costs['account_type'] == 'material') & (df_costs['department_name'] == "Head Office")]['amount_calc'].sum())
+    results['total_office_staff'] = float(df_costs[(df_costs['account_type'] == 'staff') & (df_costs['department_name'] == "Head Office")]['amount_calc'].sum())
+    results['total_office_other'] = float(df_costs[(df_costs['account_type'] == 'other cost') & (df_costs['department_name'] == "Head Office")]['amount_calc'].sum())
+    
+    return results
+
+
+
+@st.cache_data(ttl=600)
+def prepare_cost_structure_cumulative_icicle(df):
+    df = df.copy()
+    df['amount_calc'] = df['amount']
+    df_costs = df.loc[~df['account_type'].isin(["sales", "other income"])]
+    # df_costs['amount_calc'] = -df_costs['amount_calc']
+    df_costs = df_costs.loc[df_costs['amount_calc']>=0]
+
+    return df_costs

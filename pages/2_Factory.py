@@ -10,8 +10,10 @@ st.set_page_config(
     page_icon=Image.open("assets/logo.ico"),
     layout='wide',
     initial_sidebar_state='auto')
+
+DEPARTMENT_NAME = "FOOD PLANT"
+
 st.markdown("# Factory Project")
-st.divider()
 st.sidebar.header("Factory Project")
 
 # The `on_change` callback is correctly defined without calling it
@@ -50,14 +52,10 @@ custom_adjustment = st.sidebar.toggle(
     key="custom_adjustment",
     help=(
         "Making the following adjustments for easier interpretation:\n"
-        "- Norwegian krone exchange rate: 10 NOK = 1 EUR\n"
-        "- Outsourced sushibar's other external services changed to staff cost"
-        "- The restaurant rental income is offset by the rent expense\n"
-        "- The restaurant section only records sales of directly operated stores and franchise fees\n"
-        "- Gas expenses and business trip allowances in the restaurant are counted as part of the salary\n"
         "- Factory hot meal modification, costs are charged to the sushibar, sales are added to the factory\n"
         "- Factory's S-card purchase correction to fuel expenses\n"
         "- Factory's other external services changed to staff cost\n"
+        "- Mileage and daily allowances in the Factory are counted as part of the salary\n"
         "- Internal company admin transfer fee modification\n"
         "- Modify the unallocated records\n"
     ),
@@ -79,7 +77,8 @@ search_btn = st.sidebar.button("Search")
 
 if search_btn:
     po_tab1, po_tab2 = st.tabs(["Figure", "Data"])
-    df = prepare_performance_overview_data(department_name="food plant", start_str=start_str, end_str=end_str, report_type=report_type)
+    df = query_performance_overview_data(department_name=DEPARTMENT_NAME, report_type=report_type, start_str=start_str, end_str=end_str, timeframe=timeframe, custom_adjustment=custom_adjustment)
+    df = prepare_performance_overview_data(df)
     with po_tab1:
         st.plotly_chart(make_performance_overview_graph(df), use_container_width=True)
     with po_tab2:
