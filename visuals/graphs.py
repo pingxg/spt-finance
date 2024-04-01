@@ -403,78 +403,24 @@ def make_cost_structure_cumulative_by_department_graph(data):
     return figure
 
 
-
 def make_cost_structure_cumulative_icicle_graph(df):
     custom_color_scale = [
         [0.0, color_gradient(n=2)[0]],  # Blue at the lowest end of the scale
         [1.0, color_gradient(n=2)[1]]    # Red at the highest end of the scale
     ]
-    # Function to extract initials
-    def get_initials(s):
-        # return ''.join(word[0] for word in s.split()).upper()
-        return s.split()[-1][0].lower()
-
-    # Applying the function to the 'department_name' column to create a new column 'dept_initials'
-    df['dept_initials'] = df['department_name'].apply(get_initials)
-    df['account_type'] = df['account_type'].str.capitalize()
-    
-    # Concatenating the initials with 'account_type' and 'account_name'
-    df['account_type'] = df['account_type'] + '-' + df['dept_initials']
-    df['account_name'] = df['account_name'] + '-' + df['dept_initials']
-
-    df = df.groupby(['department_name', 'account_type', 'account_name'])
-    df = df['amount_calc'].sum().reset_index()
-
-
-
-    levels = ['account_name', 'account_type', 'department_name'] # levels used for the hierarchical chart
-    color_columns = ['amount_calc', 'amount_calc']
-    value_column = 'amount_calc'
-
-    def build_hierarchical_dataframe(df, levels, value_column, color_columns=None):
-        """
-        Build a hierarchy of levels for Icicle charts.
-
-        Levels are given starting from the bottom to the top of the hierarchy,
-        ie the last level corresponds to the root.
-        """
-        df_all_trees = pd.DataFrame(columns=['id', 'parent', 'value', 'color'])
-        for i, level in enumerate(levels):
-            df_tree = pd.DataFrame(columns=['id', 'parent', 'value', 'color'])
-            dfg = df.groupby(levels[i:]).sum()
-            dfg = dfg.reset_index()
-            df_tree['id'] = dfg[level].copy()
-            if i < len(levels) - 1:
-                df_tree['parent'] = dfg[levels[i+1]].copy()
-            else:
-                df_tree['parent'] = 'total'
-            df_tree['value'] = dfg[value_column]
-            df_tree['color'] = dfg[value_column]
-            df_all_trees = pd.concat([df_all_trees, df_tree], ignore_index=True)
-        total_row = pd.DataFrame([{
-            'id': 'total',
-            'parent': '',
-            'value': df[value_column].sum(),
-            'color': df[value_column].sum()
-        }])
-        df_all_trees = pd.concat([df_all_trees, total_row], ignore_index=True)
-        return df_all_trees
-
-    df_all_trees = build_hierarchical_dataframe(df, levels, value_column, color_columns)
-    average_score = 1
 
     figure = make_subplots(1, 1, specs=[[{"type": "domain"}]],)
 
     figure.add_trace(go.Icicle(
-        labels=df_all_trees['id'],
-        parents=df_all_trees['parent'],
-        values=df_all_trees['value'],
+        labels=df['id'],
+        parents=df['parent'],
+        values=df['value'],
         branchvalues='total',
         marker=dict(
-            colors=df_all_trees['color'],
+            colors=df['color'],
             # colorscale='Gnbu',
             colorscale=custom_color_scale,
-            cmid=average_score
+            cmid=1
             ),
         hovertemplate='<b>%{label} </b> <br> Costs: %{value}<br>',
         name=''

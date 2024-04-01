@@ -246,7 +246,56 @@ def prepare_cost_structure_cumulative_icicle(df):
     df = df.copy()
     df['amount_calc'] = df['amount']
     df_costs = df.loc[~df['account_type'].isin(["sales", "other income"])]
-    # df_costs['amount_calc'] = -df_costs['amount_calc']
     df_costs = df_costs.loc[df_costs['amount_calc']>=0]
+    # Function to extract initials
+    def get_initials(s):
+        # return ''.join(word[0] for word in s.split()).upper()
+        return s.split()[-1][0].lower()
 
-    return df_costs
+    # Applying the function to the 'department_name' column to create a new column 'dept_initials'
+    df_costs['dept_initials'] = df_costs['department_name'].apply(get_initials)
+    df_costs['account_type'] = df_costs['account_type'].str.capitalize()
+    
+    # Concatenating the initials with 'account_type' and 'account_name'
+    df_costs['account_type'] = df_costs['account_type'] + '-' + df_costs['dept_initials']
+    df_costs['account_name'] = df_costs['account_name'] + '-' + df_costs['dept_initials']
+
+    df_costs = df_costs.groupby(['department_name', 'account_type', 'account_name'])
+    df_costs = df_costs['amount_calc'].sum().reset_index()
+
+    levels = ['account_name', 'account_type', 'department_name'] # levels used for the hierarchical chart
+    color_columns = ['amount_calc', 'amount_calc']
+    value_column = 'amount_calc'
+
+    def build_hierarchical_dataframe(df, levels, value_column, color_columns=None):
+        """
+        Build a hierarchy of levels for Icicle charts.
+
+        Levels are given starting from the bottom to the top of the hierarchy,
+        ie the last level corresponds to the root.
+        """
+        df_all_trees = pd.DataFrame(columns=['id', 'parent', 'value', 'color'])
+        for i, level in enumerate(levels):
+            df_tree = pd.DataFrame(columns=['id', 'parent', 'value', 'color'])
+            dfg = df.groupby(levels[i:]).sum()
+            dfg = dfg.reset_index()
+            df_tree['id'] = dfg[level].copy()
+            if i < len(levels) - 1:
+                df_tree['parent'] = dfg[levels[i+1]].copy()
+            else:
+                df_tree['parent'] = 'total'
+            df_tree['value'] = dfg[value_column]
+            df_tree['color'] = dfg[value_column]
+            df_all_trees = pd.concat([df_all_trees, df_tree], ignore_index=True)
+        total_row = pd.DataFrame([{
+            'id': 'total',
+            'parent': '',
+            'value': df[value_column].sum(),
+            'color': df[value_column].sum()
+        }])
+        df_all_trees = pd.concat([df_all_trees, total_row], ignore_index=True)
+        return df_all_trees
+
+    df_all_trees = build_hierarchical_dataframe(df, levels, value_column, color_columns)
+
+    return df_all_trees
