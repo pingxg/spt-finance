@@ -422,10 +422,9 @@ def make_cost_structure_cumulative_icicle_graph(df):
             colorscale=custom_color_scale,
             cmid=1
             ),
-        hovertemplate='<b>%{label} </b> <br> Costs: %{value}<br>',
+        hovertemplate='<b>%{label} </b> <br> Costs: %{value}<br> €',
         name=''
         ), 1, 1)
-
 
     figure.update_layout(height=700,)
     return figure

@@ -296,6 +296,6 @@ def prepare_cost_structure_cumulative_icicle(df):
         df_all_trees = pd.concat([df_all_trees, total_row], ignore_index=True)
         return df_all_trees
 
-    df_all_trees = build_hierarchical_dataframe(df, levels, value_column, color_columns)
+    df_all_trees = build_hierarchical_dataframe(df_costs, levels, value_column, color_columns)
 
     return df_all_trees

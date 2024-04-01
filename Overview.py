@@ -88,7 +88,7 @@ def main():
             split_office_cost=split_office_cost,
         )
         
-        st.subheader('Group Performance Analysis')
+        st.subheader('Performance Analysis')
         po_fig_tab, po_data_tab = st.tabs(["Figure", "Data"])
         po_df = prepare_performance_overview_data(df, denominator="sales")
         with po_fig_tab:
@@ -96,7 +96,7 @@ def main():
         with po_data_tab:
             st.dataframe(po_df, use_container_width=True, hide_index=True)
 
-        st.subheader('Group Turnover Breakdown')
+        st.subheader('Turnover Breakdown')
         ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
         ts_df = prepare_turnover_structure_data(df)
         with ts_fig_tab:
@@ -104,7 +104,7 @@ def main():
         with ts_data_tab:
             st.dataframe(ts_df, use_container_width=True, hide_index=True)
 
-        st.subheader('Group Cost Structure')
+        st.subheader('Cost Structure')
         cs_fig1_tab, cs_fig2_tab, cs_data_tab = st.tabs(["Cost to Sales Ratio", "Cost to Total Cost Ratio", "Data"])
         
         with cs_fig1_tab:
@@ -116,7 +116,7 @@ def main():
         with cs_data_tab:
             st.dataframe(cs_df, use_container_width=True, hide_index=True)
 
-        st.subheader('Group Cost Details')
+        st.subheader('Cost Details')
         cdd_fig1_tab, cdd_fig2_tab, cdd_fig3_tab, cdd_data_tab = st.tabs(["Cost Breakdown by Department", "Cumulative Cost Percentage", "Cumulative Cost Details Breakdown", "Data"])
         cdd_df = df.copy()
         with cdd_fig1_tab:
