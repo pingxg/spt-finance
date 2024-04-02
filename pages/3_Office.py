@@ -11,7 +11,7 @@ st.set_page_config(
     layout='wide',
     initial_sidebar_state='auto')
 
-DEPARTMENT_NAME = "HEAD OFFICE"
+DEPARTMENT_NAME = "Head Office"
 
 st.markdown("# Head Office")
 st.sidebar.header("Head Office")

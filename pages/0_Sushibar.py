@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state='auto',
 )
 
-DEPARTMENT_NAME = 'FOOD KIOSK SUSHIBAR'
+DEPARTMENT_NAME = 'Food Kiosk Sushibar'
 st.markdown("# Sushibar Project")
 
 st.sidebar.header("Sushibar Project")
@@ -85,10 +85,39 @@ if search_btn:
         split_office_cost=split_office_cost,
     )
     
-    st.subheader('Sushibar performance analysis')
-    po_tab1, po_tab2 = st.tabs(["Figure", "Data"])
-    po_df = prepare_performance_overview_data(df)
-    with po_tab1:
+    st.subheader(f'Performance Analysis{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    po_fig_tab, po_data_tab = st.tabs(["Figure", "Data"])
+    po_df = prepare_performance_overview_data(df, denominator="sales")
+    with po_fig_tab:
         st.plotly_chart(make_performance_overview_graph(po_df), use_container_width=True)
-    with po_tab2:
+    with po_data_tab:
         st.dataframe(po_df, use_container_width=True, hide_index=True)
+
+    # st.subheader(f'Turnover Breakdown{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    # ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
+    # ts_df = prepare_turnover_structure_data(df)
+    # with ts_fig_tab:
+    #     st.plotly_chart(make_turnover_structure_graph(ts_df), use_container_width=True)
+    # with ts_data_tab:
+    #     st.dataframe(ts_df, use_container_width=True, hide_index=True)
+
+    st.subheader(f'Cost Structure{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    cs_fig1_tab, cs_fig2_tab, cs_data_tab = st.tabs(["Cost to Sales Ratio", "Cost to Total Cost Ratio", "Data"])
+    
+    with cs_fig1_tab:
+        cs_df = prepare_performance_overview_data(df, denominator="sales")
+        st.plotly_chart(make_cost_structure_graph(cs_df, denominator="sales"), use_container_width=True)
+    with cs_fig2_tab:
+        cs_df = prepare_performance_overview_data(df, denominator="costs")
+        st.plotly_chart(make_cost_structure_graph(cs_df, denominator="costs"), use_container_width=True)
+    with cs_data_tab:
+        st.dataframe(cs_df, use_container_width=True, hide_index=True)
+
+    st.subheader(f'Cost Details{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    cdd_fig_tab, cdd_data_tab = st.tabs([ "Cumulative Cost Details Breakdown", "Data"])
+    cdd_df = df.copy()
+    with cdd_fig_tab:
+        processed_df = prepare_cost_structure_cumulative_icicle(cdd_df)
+        st.plotly_chart(make_cost_structure_cumulative_icicle_graph(processed_df), use_container_width=True)
+    with cdd_data_tab:
+        st.dataframe(cdd_df, use_container_width=True, hide_index=True)

@@ -11,7 +11,7 @@ st.set_page_config(
     layout='wide',
     initial_sidebar_state='auto')
 
-DEPARTMENT_NAME = "FOOD PLANT"
+DEPARTMENT_NAME = "Food Plant"
 
 st.markdown("# Factory Project")
 st.sidebar.header("Factory Project")
@@ -61,7 +61,7 @@ custom_adjustment = st.sidebar.toggle(
     ),
 )
 
-st.sidebar.toggle(
+split_office_cost = st.sidebar.toggle(
     "Split office cost",
     value=False,
     key="split_office_cost",
