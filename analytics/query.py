@@ -1,9 +1,9 @@
 import pandas as pd
 import streamlit as st
-from sqlalchemy import create_engine, and_, or_, func
+from sqlalchemy import create_engine, and_, or_, func, extract, desc
 from datetime import datetime
 from database.session import session_scope
-from database.models import Department, Location, FinancialAccount, FinancialData
+from database.models import Department, Location, FinancialAccount, FinancialData, SalesData
 
 REPORT_TYPE = {
     'standard': 'std_rate',
@@ -112,21 +112,43 @@ def query_performance_overview_data(department_name=None, report_type='standard'
         
         if start_str is not None:
             if timeframe == "quarter":
-                query = query.filter(func.concat(FinancialData.year, '-Q', ((FinancialData.month - 1) // 3 + 1)) >= start_str)
+                year, quarter = map(int, start_str.split('-Q'))
+                query = query.filter(
+                    (FinancialData.year > year) | 
+                    ((FinancialData.year == year) & 
+                    (((FinancialData.month - 1) // 3 + 1) >= quarter))
+                )
             elif timeframe == "month":
-                query = query.filter(func.concat(FinancialData.year, '-M', func.lpad(FinancialData.month, 2, '0')) >= start_str)
-            else:
-                query = query.filter(FinancialData.year >= start_str)
+                year, month = map(int, start_str.split('-M'))
+                query = query.filter(
+                    (FinancialData.year > year) | 
+                    ((FinancialData.year == year) & 
+                    (FinancialData.month >= month))
+                )
+            else:  # Assuming start_str is just a year here
+                query = query.filter(FinancialData.year >= int(start_str))
         
         if end_str is not None:
             if timeframe == "quarter":
-                query = query.filter(func.concat(FinancialData.year, '-Q', ((FinancialData.month - 1) // 3 + 1)) <= end_str)
+                year, quarter = map(int, end_str.split('-Q'))
+                query = query.filter(
+                    (FinancialData.year < year) | 
+                    ((FinancialData.year == year) & 
+                    (((FinancialData.month - 1) // 3 + 1) <= quarter))
+                )
             elif timeframe == "month":
-                query = query.filter(func.concat(FinancialData.year, '-M', func.lpad(FinancialData.month, 2, '0')) <= end_str)
-            else:
-                query = query.filter(FinancialData.year <= end_str)
+                year, month = map(int, end_str.split('-M'))
+                query = query.filter(
+                    (FinancialData.year < year) | 
+                    ((FinancialData.year == year) & 
+                    (FinancialData.month <= month))
+                )
+            else:  # Assuming end_str is just a year here
+                query = query.filter(FinancialData.year <= int(end_str))
+
         results = query.all()
-        
+
+
         results_data = [{
             'year': year,
             'month': month,
@@ -147,6 +169,113 @@ def query_performance_overview_data(department_name=None, report_type='standard'
     if split_office_cost:
         result_df = office_cost_adjustment(result_df)
     return result_df
+
+
+
+@st.cache_data(ttl=600)
+def query_sales_data(department_name=None, start_str=None, end_str=None, timeframe="quarter"):
+    timeframe = timeframe.lower()
+    if 'q' in start_str.lower() or 'q' in end_str.lower():
+        timeframe = 'quarter'
+    elif 'm' in start_str.lower() or 'm' in end_str.lower():
+        timeframe = 'month'
+    else:
+        timeframe = 'year'
+
+    with session_scope() as session:
+        query = session.query(
+            SalesData.date, 
+            SalesData.amount,
+            SalesData.product_catagory,
+            SalesData.location_internal_id,
+            Location.short_name.label('location_name'),
+            Department.name.label('department_name'),
+        ).join(
+            Location, SalesData.location_internal_id == Location.id
+        ).join(
+            Department, Location.department_id == Department.id
+        )
+
+        if department_name is not None:
+            query = query.filter(Location.department.has(name=department_name))
+        
+        # Assuming start_str and end_str are provided in the format "YYYY" for year, "YYYY-QX" for quarters,
+        # and "YYYY-MM" for months, you can split these strings to extract the numerical values for year, quarter, and month.
+
+        if start_str is not None:
+            if timeframe == "quarter":
+                year, quarter = map(int, start_str.split('-Q'))
+                query = query.filter(
+                    (extract('year', SalesData.date) > year) | 
+                    ((extract('year', SalesData.date) == year) & 
+                    (((extract('month', SalesData.date) - 1) // 3 + 1) >= quarter))
+                )
+            elif timeframe == "month":
+                year, month = map(int, start_str.split('-M'))
+                query = query.filter(
+                    (extract('year', SalesData.date) > year) | 
+                    ((extract('year', SalesData.date) == year) & 
+                    (extract('month', SalesData.date) >= month))
+                )
+            else:  # Assuming start_str is just a year here
+                query = query.filter(extract('year', SalesData.date) >= int(start_str))
+        
+        if end_str is not None:
+            if timeframe == "quarter":
+                year, quarter = map(int, end_str.split('-Q'))
+                query = query.filter(
+                    (extract('year', SalesData.date) < year) | 
+                    ((extract('year', SalesData.date) == year) & 
+                    (((extract('month', SalesData.date) - 1) // 3 + 1) <= quarter))
+                )
+            elif timeframe == "month":
+                year, month = map(int, end_str.split('-M'))
+                query = query.filter(
+                    (extract('year', SalesData.date) < year) | 
+                    ((extract('year', SalesData.date) == year) & 
+                    (extract('month', SalesData.date) <= month))
+                )
+            else:  # Assuming end_str is just a year here
+                query = query.filter(extract('year', SalesData.date) <= int(end_str))
+
+        results = query.all()
+        
+        results_data = [{
+            'date': date,
+            'amount': amount,
+            'product_category': product_catagory,
+            'location_id': location_internal_id,
+            'location_name': location_name,
+            'department_name': department_name,
+        } for date, amount, product_catagory, location_internal_id, location_name, department_name in results]
+
+    df = pd.DataFrame(results_data)
+    # result_df = generate_period_str(df, timeframe)
+    # Step 1: Query to calculate the total sales for each product type
+    with session_scope() as session:
+
+        product_sales = session.query(
+            SalesData.product_catagory.label('product_category'),
+            func.sum(SalesData.amount).label('total_sales')
+        ).group_by(SalesData.product_catagory).order_by(desc('total_sales')).all()
+
+        # Step 2: Calculate the total sales across all product types
+        total_sales = sum(sales.total_sales for sales in product_sales)
+
+        # Step 3: Calculate the sales percentage for each product type
+        sales_percentage = [
+            {
+                'product_category': sales.product_category,
+                'sales_percentage': (sales.total_sales / total_sales) * 100
+            }
+            for sales in product_sales
+        ]
+    st.write(sales_percentage)
+    
+    return df
+
+
+    return None
 
 @st.cache_data(ttl=600)
 def financial_data_custom_adjustment(df):
@@ -199,6 +328,21 @@ def prepare_turnover_structure_data(df, department_name=None):
     return pivot_df
 
 @st.cache_data(ttl=600)
+def prepare_sales_data(df):
+    df = df.copy()
+    df['amount_calc'] = df['amount'] * df['rate']
+    # # if department_name is None:
+    # #     df_grouped_sales = df.loc[df['account_type'].isin(["sales", "other income"])].groupby(['period', 'department_name'])['amount_calc'].sum().reset_index().sort_values(by=['period','amount_calc'], kind='mergesort', ascending=[True, False])
+    # # else:
+    # #     df_grouped_sales = df.loc[(df['account_type'].isin(["sales", "other income"])) & (df['department_name']==department_name)].groupby(['period', 'department_name'])['amount_calc'].sum().reset_index().sort_values(by=['period','amount_calc'], kind='mergesort', ascending=[True, False])
+
+    # # Pivoting the data with 'period' as index, 'location' as columns, and 'amount' as values
+    # pivot_df = df_grouped_sales.pivot_table(index='period', columns='department_name', values='amount_calc', aggfunc='sum')
+    # pivot_df.reset_index(inplace=True)  # Resetting the index if you want 'period' as a column
+    # return pivot_df
+
+
+@st.cache_data(ttl=600)
 def prepare_cost_structure_breakdown(df, department_name=None):
     df = df.copy()
     if department_name is not None:
@@ -248,7 +392,7 @@ def prepare_cost_structure_cumulative(df, department_name=None):
 
 
 @st.cache_data(ttl=600)
-def prepare_cost_structure_cumulative_icicle(df, department_name=None):
+def prepare_cost_structure_cumulative_icicle(df):
     df = df.copy()
     df['amount_calc'] = df['amount']
     df_costs = df.loc[~df['account_type'].isin(["sales", "other income"])]
@@ -270,10 +414,9 @@ def prepare_cost_structure_cumulative_icicle(df, department_name=None):
     df_costs = df_costs['amount_calc'].sum().reset_index()
 
     levels = ['account_name', 'account_type', 'department_name'] # levels used for the hierarchical chart
-    color_columns = ['amount_calc', 'amount_calc']
     value_column = 'amount_calc'
 
-    def build_hierarchical_dataframe(df, levels, value_column, color_columns=None):
+    def build_hierarchical_dataframe(df, levels, value_column):
         """
         Build a hierarchy of levels for Icicle charts.
 
@@ -302,6 +445,6 @@ def prepare_cost_structure_cumulative_icicle(df, department_name=None):
         df_all_trees = pd.concat([df_all_trees, total_row], ignore_index=True)
         return df_all_trees
 
-    df_all_trees = build_hierarchical_dataframe(df_costs, levels, value_column, color_columns)
+    df_all_trees = build_hierarchical_dataframe(df_costs, levels, value_column)
 
     return df_all_trees

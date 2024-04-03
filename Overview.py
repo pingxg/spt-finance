@@ -49,6 +49,8 @@ def main():
         key="custom_adjustment",
         help=(
             "Making the following adjustments for easier interpretation:\n"
+            "- Estonia cost adjustments (4385 > Finance; 4395 > Admin; 4300 > Marketing)\n"
+            "- Norway cost adjustments (6700, 6705 > Finance; 6720, 6790 > Admin; 7320 > Marketing)\n"
             "- Norwegian krone exchange rate: 10 NOK = 1 EUR\n"
             "- Outsourced sushibar's other external services changed to staff cost\n"
             "- The restaurant rental income is offset by the rent expense\n"
@@ -98,9 +100,9 @@ def main():
 
         st.subheader(f'Turnover Breakdown{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
         ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
-        ts_df = prepare_turnover_structure_data(df)
+        ts_df = prepare_turnover_structure_data(df, department_name=DEPARTMENT_NAME)
         with ts_fig_tab:
-            st.plotly_chart(make_turnover_structure_graph(ts_df), use_container_width=True)
+            st.plotly_chart(make_turnover_structure_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
         with ts_data_tab:
             st.dataframe(ts_df, use_container_width=True, hide_index=True)
 

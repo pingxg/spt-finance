@@ -429,11 +429,11 @@ def make_cost_structure_cumulative_icicle_graph(df):
         branchvalues='total',
         marker=dict(
             colors=df['color'],
-            # colorscale='Gnbu',
-            colorscale=custom_color_scale,
+            colorscale='Gnbu',
+            # colorscale=custom_color_scale,
             cmid=1
             ),
-        hovertemplate='<b>%{label} </b> <br> Costs: %{value}<br> €',
+        hovertemplate='<b>%{label} </b> <br> Costs: %{value} €',
         name=''
         ), 1, 1)
 

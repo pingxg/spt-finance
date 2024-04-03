@@ -53,6 +53,8 @@ custom_adjustment = st.sidebar.toggle(
     key="custom_adjustment",
     help=(
         "Making the following adjustments for easier interpretation:\n"
+        "- Estonia cost adjustments (4385 > Finance; 4395 > Admin; 4300 > Marketing)\n"
+        "- Norway cost adjustments (6700, 6705 > Finance; 6720, 6790 > Admin; 7320 > Marketing)\n"
         "- Norwegian krone exchange rate: 10 NOK = 1 EUR\n"
         "- Outsourced sushibar's other external services changed to staff cost\n"
         "- Internal company admin transfer fee modification\n"
@@ -84,7 +86,14 @@ if search_btn:
         custom_adjustment=custom_adjustment,
         split_office_cost=split_office_cost,
     )
-    
+    ss_df = query_sales_data(
+        department_name=DEPARTMENT_NAME,
+        start_str=start_str,
+        end_str=end_str,
+        timeframe=timeframe,
+    )
+    st.write(ss_df)
+
     st.subheader(f'Performance Analysis{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
     po_fig_tab, po_data_tab = st.tabs(["Figure", "Data"])
     po_df = prepare_performance_overview_data(df, denominator="sales")
@@ -93,13 +102,14 @@ if search_btn:
     with po_data_tab:
         st.dataframe(po_df, use_container_width=True, hide_index=True)
 
-    # st.subheader(f'Turnover Breakdown{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
-    # ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
-    # ts_df = prepare_turnover_structure_data(df)
-    # with ts_fig_tab:
-    #     st.plotly_chart(make_turnover_structure_graph(ts_df), use_container_width=True)
-    # with ts_data_tab:
-    #     st.dataframe(ts_df, use_container_width=True, hide_index=True)
+    st.subheader(f'Turnover Breakdown{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
+    ts_df = prepare_turnover_structure_data(df, department_name=DEPARTMENT_NAME)
+
+    with ts_fig_tab:
+        st.plotly_chart(make_turnover_structure_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
+    with ts_data_tab:
+        st.dataframe(ts_df, use_container_width=True, hide_index=True)
 
     st.subheader(f'Cost Structure{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
     cs_fig1_tab, cs_fig2_tab, cs_data_tab = st.tabs(["Cost to Sales Ratio", "Cost to Total Cost Ratio", "Data"])

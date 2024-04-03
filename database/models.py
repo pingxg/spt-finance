@@ -3,11 +3,29 @@ from dotenv import load_dotenv
 
 from sqlalchemy.orm import relationship, sessionmaker, declarative_base
 from sqlalchemy import (
-    Column, Integer, String, DECIMAL, Boolean, ForeignKey, create_engine
+    Column, Integer, String, DECIMAL, Boolean, ForeignKey, create_engine, DATE, DATETIME
 )
 load_dotenv()
 
 Base = declarative_base()
+
+
+class SalesData(Base):
+    __tablename__ = 'sales_data'
+    __table_args__ = {'schema': 'data'}
+
+    id = Column(Integer, primary_key=True)
+    date = Column(DATE)
+    product_internal_id = Column(Integer)
+    quantity = Column(DECIMAL)
+    amount = Column(DECIMAL)
+    unit = Column(String)
+    product_catagory = Column(String)
+    location_internal_id = Column(Integer, ForeignKey('master.location.id'))
+    upload_time = Column(DATETIME)
+    store_name = Column(String)
+
+    location = relationship('Location', backref='locations')
 
 class Location(Base):
     __tablename__ = 'location'
