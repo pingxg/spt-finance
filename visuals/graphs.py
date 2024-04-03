@@ -105,68 +105,26 @@ def make_performance_overview_graph(df, group_by="period"):
 
 def make_turnover_structure_graph(df, group_by="period", department_name=None):
     df = df.copy()
+    columns_to_display = [col for col in df.columns if col != group_by]
 
-    COLOR_4 = color_gradient(n=4)
+    COLOR = color_gradient(n=len(columns_to_display))
     figure = make_subplots(specs=[[{"secondary_y": True}]])
 
-    if department_name is None:
+    for i in range(len(columns_to_display)):
         figure.add_trace(
             go.Bar(
                 x=df[group_by],
-                y=df['Food Kiosk Sushibar'],
-                hovertemplate=f"Sushibar"+": %{y:.2f} €",
-                # base=0,
-                marker_color=COLOR_4[0],
-                name='Sushibar',
-            ),
-        )
-
-        figure.add_trace(
-            go.Bar(
-                x=df[group_by],
-                y=df['Restaurant'],
-                marker_color=COLOR_4[1],
-                hovertemplate=f"Restaurant"+": %{y:.2f} €",
-                name='Restaurant',
-            ),
-        )
-
-        figure.add_trace(
-            go.Bar(
-                x=df[group_by],
-                y=df['Food Plant'],
-                hovertemplate=f"Food Plant"+": %{y:.2f} €",
-                marker_color=COLOR_4[2],
-                name='Food Plant',
-            ),
-        )
-
-
-        figure.add_trace(
-            go.Bar(
-                x=df[group_by],
-                y=df['Head Office'],
-                marker_color=COLOR_4[3],
-                hovertemplate=f"Office"+": %{y:.2f} €",
-                name='Office',
-            ),
-        )
-    else:
-        figure.add_trace(
-            go.Bar(
-                x=df[group_by],
-                y=df[department_name],
-                hovertemplate=f"{department_name}"+": %{y:.2f} €",
-                # base=0,
-                marker_color=COLOR_4[0],
-                name=department_name,
+                y=df[f"{columns_to_display[i]}"],
+                hovertemplate=f"{columns_to_display[i]}"+": %{y:.2f} €",
+                marker_color=COLOR[i],
+                name=columns_to_display[i],
             ),
         )
 
     figure.update_yaxes(
         title_text=f"<b>Turnover</b> (€)",
-        titlefont=dict(color=COLOR_4[0]),
-        tickfont=dict(color=COLOR_4[0]),
+        titlefont=dict(color=COLOR[0]),
+        tickfont=dict(color=COLOR[0]),
         secondary_y=False,
     )
 
@@ -177,7 +135,6 @@ def make_turnover_structure_graph(df, group_by="period", department_name=None):
         uniformtext_mode='hide',
         barmode='group',
     )
-
     return figure
 
 

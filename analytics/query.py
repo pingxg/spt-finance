@@ -251,31 +251,10 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
 
     df = pd.DataFrame(results_data)
     # result_df = generate_period_str(df, timeframe)
-    # Step 1: Query to calculate the total sales for each product type
-    with session_scope() as session:
 
-        product_sales = session.query(
-            SalesData.product_catagory.label('product_category'),
-            func.sum(SalesData.amount).label('total_sales')
-        ).group_by(SalesData.product_catagory).order_by(desc('total_sales')).all()
-
-        # Step 2: Calculate the total sales across all product types
-        total_sales = sum(sales.total_sales for sales in product_sales)
-
-        # Step 3: Calculate the sales percentage for each product type
-        sales_percentage = [
-            {
-                'product_category': sales.product_category,
-                'sales_percentage': (sales.total_sales / total_sales) * 100
-            }
-            for sales in product_sales
-        ]
-    st.write(sales_percentage)
     
     return df
 
-
-    return None
 
 @st.cache_data(ttl=600)
 def financial_data_custom_adjustment(df):
@@ -319,11 +298,12 @@ def prepare_turnover_structure_data(df, department_name=None):
     df['amount_calc'] = df['amount'] * df['rate']
     if department_name is None:
         df_grouped_sales = df.loc[df['account_type'].isin(["sales", "other income"])].groupby(['period', 'department_name'])['amount_calc'].sum().reset_index().sort_values(by=['period','amount_calc'], kind='mergesort', ascending=[True, False])
+        pivot_df = df_grouped_sales.pivot_table(index='period', columns='department_name', values='amount_calc', aggfunc='sum')
     else:
-        df_grouped_sales = df.loc[(df['account_type'].isin(["sales", "other income"])) & (df['department_name']==department_name)].groupby(['period', 'department_name'])['amount_calc'].sum().reset_index().sort_values(by=['period','amount_calc'], kind='mergesort', ascending=[True, False])
+        df_grouped_sales = df.loc[(df['account_type'].isin(["sales"])) & (df['department_name']==department_name)].groupby(['period', 'account_name'])['amount_calc'].sum().reset_index().sort_values(by=['period','amount_calc'], kind='mergesort', ascending=[True, False])
+        pivot_df = df_grouped_sales.pivot_table(index='period', columns='account_name', values='amount_calc', aggfunc='sum')
 
     # Pivoting the data with 'period' as index, 'location' as columns, and 'amount' as values
-    pivot_df = df_grouped_sales.pivot_table(index='period', columns='department_name', values='amount_calc', aggfunc='sum')
     pivot_df.reset_index(inplace=True)  # Resetting the index if you want 'period' as a column
     return pivot_df
 
