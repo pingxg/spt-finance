@@ -188,7 +188,7 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
             SalesData.amount,
             SalesData.product_catagory,
             SalesData.location_internal_id,
-            Location.short_name.label('location_name'),
+            Location.short_name.label('sushibar_name'),
             Department.name.label('department_name'),
         ).join(
             Location, SalesData.location_internal_id == Location.id
@@ -245,9 +245,9 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
             'amount': amount,
             'product_category': product_catagory,
             'location_id': location_internal_id,
-            'location_name': location_name,
+            'sushibar_name': sushibar_name,
             'department_name': department_name,
-        } for date, amount, product_catagory, location_internal_id, location_name, department_name in results]
+        } for date, amount, product_catagory, location_internal_id, sushibar_name, department_name in results]
 
     df = pd.DataFrame(results_data)
     # result_df = generate_period_str(df, timeframe)
