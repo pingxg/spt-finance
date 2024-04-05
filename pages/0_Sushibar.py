@@ -104,7 +104,7 @@ if search_btn:
 
     st.subheader(f'Turnover Breakdown{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
     ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
-    ts_df = prepare_turnover_structure_data(df, department_name=DEPARTMENT_NAME)
+    ts_df = prepare_turnover_structure_data(df, department_name=DEPARTMENT_NAME, pivot_by="account_name")
 
     with ts_fig_tab:
         st.plotly_chart(make_turnover_structure_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
