@@ -3,7 +3,7 @@ import streamlit as st
 from sqlalchemy import create_engine, and_, or_, func, extract, desc
 from datetime import datetime
 from database.session import session_scope
-from database.models import Department, Location, FinancialAccount, FinancialData, SalesData
+from database.models import Department, Location, FinancialAccount, FinancialData, SalesData, Manager
 
 REPORT_TYPE = {
     'standard': 'std_rate',
@@ -185,20 +185,23 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
     with session_scope() as session:
         query = session.query(
             SalesData.date, 
-            SalesData.amount,
+            Location.short_name.label('location_name'),
             SalesData.product_catagory,
-            SalesData.location_internal_id,
-            Location.short_name.label('sushibar_name'),
-            Department.name.label('department_name'),
+            SalesData.amount,
+            Manager.name.label('manager'),
+            Location.city,
+            Location.country,
+            Location.status,
         ).join(
             Location, SalesData.location_internal_id == Location.id
         ).join(
+            Manager, Location.op_manager_id == Manager.id
+        ).join(
             Department, Location.department_id == Department.id
         )
-
         if department_name is not None:
             query = query.filter(Location.department.has(name=department_name))
-        
+
         # Assuming start_str and end_str are provided in the format "YYYY" for year, "YYYY-QX" for quarters,
         # and "YYYY-MM" for months, you can split these strings to extract the numerical values for year, quarter, and month.
 
@@ -237,21 +240,31 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
                 )
             else:  # Assuming end_str is just a year here
                 query = query.filter(extract('year', SalesData.date) <= int(end_str))
-
+        print(query)
         results = query.all()
         
         results_data = [{
             'date': date,
+            'location_name': location_name,
+            'product_category': product_category,
             'amount': amount,
-            'product_category': product_catagory,
-            'location_id': location_internal_id,
-            'sushibar_name': sushibar_name,
-            'department_name': department_name,
-        } for date, amount, product_catagory, location_internal_id, sushibar_name, department_name in results]
+            'manager': manager,
+            'city': city,
+            'country':country,
+            'status': status,
+        }
+        for date,
+            location_name,
+            product_category,
+            amount,
+            manager,
+            city,
+            country,
+            status,
+        in results]
 
     df = pd.DataFrame(results_data)
     # result_df = generate_period_str(df, timeframe)
-
     
     return df
 

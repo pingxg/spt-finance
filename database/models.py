@@ -42,18 +42,27 @@ class Location(Base):
     basware_matching = Column(String(45))
     basware_approver = Column(String(45))
     customer_id = Column(Integer)
-    op_manager_id = Column(Integer)
-    store_manager_id = Column(Integer)
+    op_manager_id = Column(Integer, ForeignKey('master.manager.id'))
+    store_manager_id = Column(Integer, ForeignKey('master.manager.id'))
     po_number = Column(String(45))
     email = Column(String(45))
     phone = Column(String(45))
     address = Column(String(45))
     post_code = Column(String(45))
     city = Column(String(45))
+    country = Column(String(45))
     maraplan_location_name = Column(String(45))
     
     department = relationship('Department', backref='locations')
 
+
+class Manager(Base):
+    __tablename__ = 'manager'
+    __table_args__ = {'schema': 'master'}
+    id = Column(Integer, primary_key=True)
+    name = Column(String(80))
+    phone = Column(String(45))
+    email = Column(String(45))
 
 class Department(Base):
     __tablename__ = 'department'
