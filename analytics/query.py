@@ -174,6 +174,17 @@ def query_performance_overview_data(department_name=None, report_type='standard'
 
 @st.cache_data(ttl=600)
 def query_sales_data(department_name=None, start_str=None, end_str=None, timeframe="quarter"):
+
+    def get_period(date, timeframe):
+        if timeframe == 'quarter':
+            quarter = (date.month - 1) // 3 + 1
+            return f'{date.year}-Q{quarter}'
+        elif timeframe == 'month':
+            return date.strftime('%Y-M%m')
+        else:  # default to year
+            return str(date.year)
+
+
     timeframe = timeframe.lower()
     if 'q' in start_str.lower() or 'q' in end_str.lower():
         timeframe = 'quarter'
@@ -263,6 +274,23 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
             status,
         in results]
 
+    # After fetching results from the database...
+    results_data = []
+    for date, location_name, product_category, amount, manager, city, country, status in results:
+        period = get_period(date, timeframe)
+        results_data.append({
+            'date': date,
+            'location_name': location_name,
+            'product_category': product_category,
+            'amount': amount,
+            'manager': manager,
+            'city': city,
+            'country': country,
+            'status': status,
+            'period': period,  # Add the dynamically generated period here
+        })
+
+
     df = pd.DataFrame(results_data)
     # result_df = generate_period_str(df, timeframe)
     
@@ -308,8 +336,8 @@ def prepare_performance_overview_data(df, denominator="sales"):
 @st.cache_data(ttl=600)
 def prepare_turnover_structure_data(df, department_name=None, pivot_by='department_name'):
     df = df.copy()
-    df['amount_calc'] = df['amount'] * df['rate']
-    if department_name is None:
+    if department_name is None and pivot_by == 'department_name':
+        df['amount_calc'] = df['amount'] * df['rate']
         df_grouped_sales = df.loc[df['account_type'].isin(["sales", "other income"])]\
             .groupby(['period', pivot_by])['amount_calc']\
             .sum()\
@@ -318,11 +346,12 @@ def prepare_turnover_structure_data(df, department_name=None, pivot_by='departme
         
         pivot_df = df_grouped_sales.pivot_table(index='period', columns=pivot_by, values='amount_calc', aggfunc='sum')
     else:
-        df_grouped_sales = df.loc[(df['account_type'].isin(["sales"])) & (df['department_name']==department_name)]\
-            .groupby(['period', pivot_by])['amount_calc'].sum()\
+        st.write(df)
+        df
+        df_grouped_sales = df.groupby(['period', pivot_by])['amount'].sum()\
             .reset_index()\
-            .sort_values(by=['period','amount_calc'], kind='mergesort', ascending=[True, False])
-        pivot_df = df_grouped_sales.pivot_table(index='period', columns=pivot_by, values='amount_calc', aggfunc='sum')
+            .sort_values(by=['period','amount'], kind='mergesort', ascending=[True, False])
+        pivot_df = df_grouped_sales.pivot_table(index='period', columns=pivot_by, values='amount', aggfunc='sum')
 
     # Pivoting the data with 'period' as index, 'location' as columns, and 'amount' as values
     pivot_df.reset_index(inplace=True)  # Resetting the index if you want 'period' as a column

@@ -17,6 +17,13 @@ st.markdown("# Sushibar Project")
 st.sidebar.header("Sushibar Project")
 
 
+# Initialize the session state variable for the radio selection if it doesn't exist
+if 'pivot_by' not in st.session_state:
+    st.session_state['pivot_by'] = "Manager"  # Set a default selection.
+
+def on_pivot_by_change():
+    st.session_state.pivot_by = st.session_state['temp_pivot_by']
+
 # The `on_change` callback is correctly defined without calling it
 timeframe = st.sidebar.radio(
     label="Select timeframe:",
@@ -92,7 +99,6 @@ if search_btn:
         end_str=end_str,
         timeframe=timeframe,
     )
-    st.write(ss_df)
 
     st.subheader(f'Performance Analysis{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
     po_fig_tab, po_data_tab = st.tabs(["Figure", "Data"])
@@ -103,8 +109,25 @@ if search_btn:
         st.dataframe(po_df, use_container_width=True, hide_index=True)
 
     st.subheader(f'Turnover Breakdown{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    options = ["Manager", "Product category", "Location name", "City", "Country", "Status"]
+    # Determine the current index to use as the default value
+    default_index = options.index(st.session_state['pivot_by']) if st.session_state['pivot_by'] in options else 0
+
+    # Create the radio button widget.
+    selected_option = st.radio(
+        "Select a filter:", 
+        options=options, 
+        key='temp_pivot_by',  # Use a consistent key for the widget.
+        index=default_index,  # Set the default selection based on the session state.
+        horizontal=True, 
+        on_change=on_pivot_by_change
+    )
+
+    st.session_state['pivot_by'] = selected_option
+
     ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
-    ts_df = prepare_turnover_structure_data(df, department_name=DEPARTMENT_NAME, pivot_by="account_name")
+    ts_df = prepare_turnover_structure_data(df=ss_df, department_name=DEPARTMENT_NAME, pivot_by=st.session_state['pivot_by'].lower().replace(" ", "_"))
+
 
     with ts_fig_tab:
         st.plotly_chart(make_turnover_structure_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
