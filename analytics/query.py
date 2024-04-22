@@ -3,7 +3,7 @@ import streamlit as st
 from sqlalchemy import create_engine, and_, or_, func, extract, desc
 from datetime import datetime
 from database.session import session_scope
-from database.models import Department, Location, FinancialAccount, FinancialData, SalesData, Manager
+from database.models import Department, Location, FinancialAccount, FinancialData, SalesData, Manager, Class
 
 REPORT_TYPE = {
     'standard': 'std_rate',
@@ -83,6 +83,7 @@ def query_performance_overview_data(department_name=None, report_type='standard'
             FinancialData.location_id,
             Location.short_name.label('location_name'),
             Department.name.label('department_name'),
+            Class.name.label('class_name'),
             FinancialData.account_id, 
             FinancialData.amount,
             FinancialAccount.account_name,
@@ -93,11 +94,12 @@ def query_performance_overview_data(department_name=None, report_type='standard'
             Location, FinancialData.location_id == Location.id
         ).join(
             Department, Location.department_id == Department.id
+        ).join(
+            Class, Location.class_id == Class.id
         )
         if report_type is not None:
             ratio_column = REPORT_TYPE[report_type]
             additional_column = getattr(FinancialAccount, ratio_column, None)
-            
             if additional_column is not None:
                 query = query.add_columns(additional_column)
             else:
@@ -145,7 +147,6 @@ def query_performance_overview_data(department_name=None, report_type='standard'
                 )
             else:  # Assuming end_str is just a year here
                 query = query.filter(FinancialData.year <= int(end_str))
-
         results = query.all()
 
 
@@ -155,12 +156,13 @@ def query_performance_overview_data(department_name=None, report_type='standard'
             'location_id': location_id,
             'location_name': location_name,
             'department_name': department_name,
+            'class_name': class_name,
             'account_id': account_id,
             'amount': amount,
             'account_name': account_name,
             'account_type': account_type,
             'rate': ratio_column,
-        } for year, month, location_id, location_name, department_name, account_id, amount, account_name, account_type, ratio_column in results]
+        } for year, month, location_id, location_name, department_name, class_name, account_id, amount, account_name, account_type, ratio_column in results]
 
     df = pd.DataFrame(results_data)
     result_df = generate_period_str(df, timeframe)
@@ -168,6 +170,9 @@ def query_performance_overview_data(department_name=None, report_type='standard'
         result_df = financial_data_custom_adjustment(result_df)
     if split_office_cost:
         result_df = office_cost_adjustment(result_df)
+    result_df = result_df[result_df['rate'] != 0]
+    result_df['amount_calc'] = result_df['amount'] * result_df['rate']
+
     return result_df
 
 
@@ -183,7 +188,6 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
             return date.strftime('%Y-M%m')
         else:  # default to year
             return str(date.year)
-
 
     timeframe = timeframe.lower()
     if 'q' in start_str.lower() or 'q' in end_str.lower():
@@ -251,7 +255,6 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
                 )
             else:  # Assuming end_str is just a year here
                 query = query.filter(extract('year', SalesData.date) <= int(end_str))
-        print(query)
         results = query.all()
         
         results_data = [{
@@ -290,11 +293,10 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
             'period': period,  # Add the dynamically generated period here
         })
 
-
-    df = pd.DataFrame(results_data)
-    # result_df = generate_period_str(df, timeframe)
-    
+    df = pd.DataFrame(results_data)    
     return df
+
+
 
 
 @st.cache_data(ttl=600)
@@ -311,7 +313,6 @@ def office_cost_adjustment(df):
 @st.cache_data(ttl=600)
 def prepare_performance_overview_data(df, denominator="sales"):
     df = df.copy()
-    df['amount_calc'] = df['amount'] * df['rate']
     df_grouped = df.groupby(['period'])['amount_calc'].sum().reset_index().sort_values(by=['period'], kind='mergesort', ascending=[True])
     df_grouped_sales = df.loc[df['account_type'].isin(["sales", "other income"])].groupby(['period'])['amount_calc'].sum().reset_index().sort_values(by=['period'], kind='mergesort', ascending=[True])
     df_grouped_material = df.loc[df['account_type']=="material"].groupby(['period'])['amount_calc'].sum().reset_index().sort_values(by=['period'], kind='mergesort', ascending=[True])
@@ -337,7 +338,6 @@ def prepare_performance_overview_data(df, denominator="sales"):
 def prepare_turnover_structure_data(df, department_name=None, pivot_by='department_name'):
     df = df.copy()
     if department_name is None and pivot_by == 'department_name':
-        df['amount_calc'] = df['amount'] * df['rate']
         df_grouped_sales = df.loc[df['account_type'].isin(["sales", "other income"])]\
             .groupby(['period', pivot_by])['amount_calc']\
             .sum()\
@@ -346,8 +346,6 @@ def prepare_turnover_structure_data(df, department_name=None, pivot_by='departme
         
         pivot_df = df_grouped_sales.pivot_table(index='period', columns=pivot_by, values='amount_calc', aggfunc='sum')
     else:
-        st.write(df)
-        df
         df_grouped_sales = df.groupby(['period', pivot_by])['amount'].sum()\
             .reset_index()\
             .sort_values(by=['period','amount'], kind='mergesort', ascending=[True, False])
@@ -360,7 +358,6 @@ def prepare_turnover_structure_data(df, department_name=None, pivot_by='departme
 @st.cache_data(ttl=600)
 def prepare_sales_data(df):
     df = df.copy()
-    df['amount_calc'] = df['amount'] * df['rate']
 
 
 @st.cache_data(ttl=600)
@@ -377,7 +374,6 @@ def prepare_cost_structure_cumulative(df, department_name=None):
     results = {}
     df = df.copy()
     results['departments'] = sorted(df['department_name'].unique().tolist())
-    df['amount_calc'] = df['amount'] * df['rate']
     if department_name is None:
         df_costs = df.loc[~df['account_type'].isin(["sales", "other income"])]
     else:

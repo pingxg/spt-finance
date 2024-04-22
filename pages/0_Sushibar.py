@@ -17,12 +17,9 @@ st.markdown("# Sushibar Project")
 st.sidebar.header("Sushibar Project")
 
 
-# Initialize the session state variable for the radio selection if it doesn't exist
+# # Initialize the session state variable for the radio selection if it doesn't exist
 if 'pivot_by' not in st.session_state:
     st.session_state['pivot_by'] = "Manager"  # Set a default selection.
-
-def on_pivot_by_change():
-    st.session_state.pivot_by = st.session_state['temp_pivot_by']
 
 # The `on_change` callback is correctly defined without calling it
 timeframe = st.sidebar.radio(
@@ -54,6 +51,20 @@ report_type = st.sidebar.radio(
         "- Rest of the staff cost multiply by a factor according to country: (FI:1,37; EE:1,35; NO:1,30)\n"
     )
 )
+
+
+options = ["Manager", "Product category", "Location name", "City", "Country", "Status"]
+
+selected_option = st.sidebar.radio(
+    "Select turnover filter:", 
+    options=options, 
+    key='pivot_by',  # Use a consistent key for the widget.
+    index=options.index(st.session_state['pivot_by']) if st.session_state['pivot_by'] in options else 0,  # Set the default selection based on the session state.
+    horizontal=True, 
+    help="Note: Turnover figures may differ from the performance analysis because the performance analysis's amounts are calculated on a weekly basis, while turnover data is calculated monthly."
+)
+
+
 custom_adjustment = st.sidebar.toggle(
     "Custom adjustment",
     value=True,
@@ -109,28 +120,17 @@ if search_btn:
         st.dataframe(po_df, use_container_width=True, hide_index=True)
 
     st.subheader(f'Turnover Breakdown{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
-    options = ["Manager", "Product category", "Location name", "City", "Country", "Status"]
-    # Determine the current index to use as the default value
-    default_index = options.index(st.session_state['pivot_by']) if st.session_state['pivot_by'] in options else 0
 
-    # Create the radio button widget.
-    selected_option = st.radio(
-        "Select a filter:", 
-        options=options, 
-        key='temp_pivot_by',  # Use a consistent key for the widget.
-        index=default_index,  # Set the default selection based on the session state.
-        horizontal=True, 
-        on_change=on_pivot_by_change
-    )
 
-    st.session_state['pivot_by'] = selected_option
-
-    ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
+    ts_fig1_tab, ts_fig2_tab, ts_data_tab = st.tabs(["Turnover", "Average sales", "Data"])
     ts_df = prepare_turnover_structure_data(df=ss_df, department_name=DEPARTMENT_NAME, pivot_by=st.session_state['pivot_by'].lower().replace(" ", "_"))
 
 
-    with ts_fig_tab:
+    with ts_fig1_tab:
         st.plotly_chart(make_turnover_structure_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
+    # with ts_fig2_tab:
+    #     st.plotly_chart(make_average_sales_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
+
     with ts_data_tab:
         st.dataframe(ts_df, use_container_width=True, hide_index=True)
 

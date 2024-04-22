@@ -73,6 +73,15 @@ class Department(Base):
     name = Column(String(45))
     active = Column(Boolean)
 
+class Class(Base):
+    __tablename__ = 'class'
+    __table_args__ = {'schema': 'master'}
+
+    id = Column(Integer, primary_key=True)
+    external_id = Column(String(45))
+    name = Column(String(45))
+    active = Column(Boolean)
+
 
 class FinancialAccount(Base):
     __tablename__ = 'financial_account'

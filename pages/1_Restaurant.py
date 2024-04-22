@@ -21,6 +21,10 @@ st.markdown("# Restaurant Project")
 
 st.sidebar.header("Restaurant Project")
 
+# # Initialize the session state variable for the radio selection if it doesn't exist
+if 'pivot_by' not in st.session_state:
+    st.session_state['pivot_by'] = "Class name"  # Set a default selection.
+
 # The `on_change` callback is correctly defined without calling it
 timeframe = st.sidebar.radio(
     label="Select timeframe:",
@@ -51,6 +55,21 @@ report_type = st.sidebar.radio(
         "- Rest of the staff cost multiply by a factor according to country: (FI:1,37; EE:1,35; NO:1,30)\n"
     )
 )
+
+
+options = [ "Class name", "Location name"]
+
+selected_option = st.sidebar.radio(
+    "Select turnover filter:", 
+    options=options, 
+    key='pivot_by',  # Use a consistent key for the widget.
+    index=options.index(st.session_state['pivot_by']) if st.session_state['pivot_by'] in options else 0,  # Set the default selection based on the session state.
+    horizontal=True, 
+    help="Note: Turnover figures may differ from the performance analysis because the performance analysis's amounts are calculated on a weekly basis, while turnover data is calculated monthly."
+)
+
+
+
 custom_adjustment = st.sidebar.toggle(
     "Custom adjustment",
     value=True,
@@ -101,7 +120,7 @@ if search_btn:
     st.subheader(f'Turnover Breakdown{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
     ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
     st.write(df)
-    ts_df = prepare_turnover_structure_data(df, department_name=DEPARTMENT_NAME, pivot_by="location_name")
+    ts_df = prepare_turnover_structure_data(df, department_name=DEPARTMENT_NAME, pivot_by=st.session_state['pivot_by'].lower().replace(" ", "_"))
     with ts_fig_tab:
         st.plotly_chart(make_turnover_structure_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
     with ts_data_tab:

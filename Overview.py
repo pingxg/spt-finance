@@ -120,17 +120,17 @@ def main():
 
         st.subheader(f'Cost Details{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
         cdd_fig1_tab, cdd_fig2_tab, cdd_fig3_tab, cdd_data_tab = st.tabs(["Cost Breakdown by Department", "Cumulative Cost Percentage", "Cumulative Cost Details Breakdown", "Data"])
-        cdd_df = df.copy()
+        # cdd_df = df.copy()
         with cdd_fig1_tab:
-            st.plotly_chart(make_cost_structure_breakdown_by_department_graph(cdd_df), use_container_width=True)
+            st.plotly_chart(make_cost_structure_breakdown_by_department_graph(df), use_container_width=True)
         with cdd_fig2_tab:
-            results = prepare_cost_structure_cumulative(cdd_df)
+            results = prepare_cost_structure_cumulative(df)
             st.plotly_chart(make_cost_structure_cumulative_by_department_graph(results), use_container_width=True)
         with cdd_fig3_tab:
-            processed_df = prepare_cost_structure_cumulative_icicle(cdd_df)
+            processed_df = prepare_cost_structure_cumulative_icicle(df)
             st.plotly_chart(make_cost_structure_cumulative_icicle_graph(processed_df), use_container_width=True)
         with cdd_data_tab:
-            st.dataframe(cdd_df, use_container_width=True, hide_index=True)
+            st.dataframe(df, use_container_width=True, hide_index=True)
 
 
 if __name__ == "__main__":
