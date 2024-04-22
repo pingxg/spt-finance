@@ -11,6 +11,7 @@ REPORT_TYPE = {
     'adjusted_coef': 'adj_coef_rate',
 }
 
+
 @st.cache_data(ttl=600)
 def query_unique_timeframes(timeframe='quarter'):
     timeframe = timeframe.lower()
@@ -28,6 +29,7 @@ def query_unique_timeframes(timeframe='quarter'):
             results = session.query(FinancialData.year).distinct().all()
             years = set(results)
             return [str(i[0]) for i in sorted(years)]
+
 
 @st.cache_data(ttl=600)
 def generate_period_str(df, timeframe):
@@ -75,7 +77,6 @@ def query_performance_overview_data(department_name=None, report_type='standard'
         timeframe = 'month'
     else:
         timeframe = 'year'
-    
     with session_scope() as session:
         query = session.query(
             FinancialData.year, 
@@ -104,7 +105,7 @@ def query_performance_overview_data(department_name=None, report_type='standard'
                 query = query.add_columns(additional_column)
             else:
                 raise ValueError(f"Column '{ratio_column}' not found in FinancialAccount model.")
-    
+        
         if department_name is not None:
             if not split_office_cost:
                 query = query.filter(Location.department.has(name=department_name))
@@ -172,14 +173,12 @@ def query_performance_overview_data(department_name=None, report_type='standard'
         result_df = office_cost_adjustment(result_df)
     result_df = result_df[result_df['rate'] != 0]
     result_df['amount_calc'] = result_df['amount'] * result_df['rate']
-
     return result_df
 
 
 
 @st.cache_data(ttl=600)
 def query_sales_data(department_name=None, start_str=None, end_str=None, timeframe="quarter"):
-
     def get_period(date, timeframe):
         if timeframe == 'quarter':
             quarter = (date.month - 1) // 3 + 1
@@ -297,12 +296,11 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
     return df
 
 
-
-
 @st.cache_data(ttl=600)
 def financial_data_custom_adjustment(df):
     df = df.copy()
     return df
+
 
 @st.cache_data(ttl=600)
 def office_cost_adjustment(df):
@@ -334,6 +332,7 @@ def prepare_performance_overview_data(df, denominator="sales"):
     df_grouped.fillna(0,inplace=True)
     return df_grouped
 
+
 @st.cache_data(ttl=600)
 def prepare_turnover_structure_data(df, department_name=None, pivot_by='department_name'):
     df = df.copy()
@@ -343,17 +342,16 @@ def prepare_turnover_structure_data(df, department_name=None, pivot_by='departme
             .sum()\
             .reset_index()\
             .sort_values(by=['period','amount_calc'], kind='mergesort', ascending=[True, False])
-        
         pivot_df = df_grouped_sales.pivot_table(index='period', columns=pivot_by, values='amount_calc', aggfunc='sum')
     else:
         df_grouped_sales = df.groupby(['period', pivot_by])['amount'].sum()\
             .reset_index()\
             .sort_values(by=['period','amount'], kind='mergesort', ascending=[True, False])
         pivot_df = df_grouped_sales.pivot_table(index='period', columns=pivot_by, values='amount', aggfunc='sum')
-
     # Pivoting the data with 'period' as index, 'location' as columns, and 'amount' as values
     pivot_df.reset_index(inplace=True)  # Resetting the index if you want 'period' as a column
     return pivot_df
+
 
 @st.cache_data(ttl=600)
 def prepare_sales_data(df):
