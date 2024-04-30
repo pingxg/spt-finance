@@ -21,7 +21,7 @@ def main():
         horizontal=True,
     )
     period_str_list = query_unique_timeframes(timeframe)
-    start_str = st.sidebar.selectbox(label="Start", options=period_str_list, index=len(period_str_list)-3, key="start_str")
+    start_str = st.sidebar.selectbox(label="Start", options=period_str_list, index=len(period_str_list)-5, key="start_str")
     end_str = st.sidebar.selectbox(label="End", options=period_str_list, index=len(period_str_list)-1, key="end_str")
     if start_str > end_str:
         st.toast("Wrong period selected!", icon="🚨")

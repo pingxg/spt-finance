@@ -112,8 +112,8 @@ class FinancialData(Base):
     financial_account = relationship('FinancialAccount', back_populates='financial_data')
 
 
-# Create an engine using the environment variable 'DB_URL'
-engine = create_engine(os.getenv('DB_URL', None))
+# Create an engine using the environment variable 'MYSQL_URL'
+engine = create_engine(os.getenv('MYSQL_URL', None))
 
 # Create all tables in the Base metadata if they do not exist
 Base.metadata.create_all(engine)
