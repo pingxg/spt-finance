@@ -110,6 +110,7 @@ if search_btn:
         end_str=end_str,
         timeframe=timeframe,
     )
+    ss_avg_df = prepare_avg_sales_data(ss_df)
 
     st.subheader(f'Performance Analysis{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
     po_fig_tab, po_data_tab = st.tabs(["Figure", "Data"])
@@ -128,8 +129,8 @@ if search_btn:
 
     with ts_fig1_tab:
         st.plotly_chart(make_turnover_structure_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
-    # with ts_fig2_tab:
-    #     st.plotly_chart(make_average_sales_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
+    with ts_fig2_tab:
+        st.plotly_chart(make_avg_sales_graph(ss_avg_df), use_container_width=True)
 
     with ts_data_tab:
         st.dataframe(ts_df, use_container_width=True, hide_index=True)

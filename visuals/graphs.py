@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
@@ -135,6 +136,65 @@ def make_turnover_structure_graph(df, group_by="period", department_name=None):
         uniformtext_mode='hide',
         barmode='group',
     )
+    return figure
+
+
+def make_avg_sales_graph(df):
+    COLOR_2 = color_gradient(n=2)
+    figure = make_subplots(specs=[[{"secondary_y": True}]])
+
+    # Adding the bar trace for average daily sushi
+    figure.add_trace(
+        go.Bar(
+            x=df['period'], 
+            y=df['average_daily_sushi'], 
+            name='Average daily sushi',
+            customdata=df[['operational_days','average_daily_sales']],  
+            opacity=0.9,
+            hovertemplate=(
+                "%{y:d} kg<br>" +
+                "Operational days: %{customdata[0]} days<br>" +
+                "Average daily sales: %{customdata[1]:.2f} €"),  # Formatting for currency
+            # text=[df['operational_days'], df['average_daily_sales']],
+            marker=dict(color=COLOR_2[0])),
+        secondary_y=False)
+
+    # Adding the scatter trace for number of sushibars
+    figure.add_trace(
+        go.Scatter(
+            x=df['period'],
+            y=df['unique_locations'].round(1), 
+            opacity=0.9,
+            mode='lines+markers',
+            name='Number of Sushibar',
+            hovertemplate=(
+                "%{y:d}"),
+            marker=dict(color=COLOR_2[1])),
+        secondary_y=True)
+
+    # Update y-axis for the bar graph
+    figure.update_yaxes(
+        title_text="<b>Average daily sushi</b> (kg)",
+        showgrid=False,
+        titlefont=dict(color=COLOR_2[0]),
+        tickfont=dict(color=COLOR_2[0]),
+        range=[0, 50],
+        secondary_y=False)
+
+    # Update y-axis for the scatter graph
+    figure.update_yaxes(
+        title_text="<b>Number of stores</b> (%)",
+        titlefont=dict(color=COLOR_2[1]),
+        tickfont=dict(color=COLOR_2[1]),
+        range=[0, 100],
+        dtick=20,
+        secondary_y=True)
+            
+    figure.update_layout(
+        hovermode='x unified',
+        xaxis_title="Period",
+        showlegend=False,
+        xaxis=dict(tickfont=dict(size=10)))
     return figure
 
 
