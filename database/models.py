@@ -112,6 +112,33 @@ class FinancialData(Base):
     financial_account = relationship('FinancialAccount', back_populates='financial_data')
 
 
+class SalmonOrders(Base):
+    __tablename__ = 'salmon_orders'
+    __table_args__ = {'schema': 'data'}
+
+    id = Column(Integer, primary_key=True)
+    customer = Column(String(45))
+    date = Column(DECIMAL(15, 2))
+    product = Column(String(45))
+    price = Column(DECIMAL(8, 4))
+    quantity = Column(DECIMAL(6, 2))
+    fish_size = Column(String(45))
+    entry_time = Column(DATETIME)
+    note = Column(String(120))
+
+
+class SalmonOrderWeight(Base):
+    __tablename__ = 'salmon_order_weight'
+    __table_args__ = {'schema': 'data'}
+
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey('data.salmon_orders.id'))
+    quantity = Column(DECIMAL(6, 2))
+    product_time = Column(DATETIME)
+    batch_number = Column(Integer)
+
+
+
 # Create an engine using the environment variable 'MYSQL_URL'
 engine = create_engine(os.getenv('MYSQL_URL', None))
 

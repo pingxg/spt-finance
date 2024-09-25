@@ -58,18 +58,6 @@ custom_adjustment = st.sidebar.toggle(
     ),
 )
 
-st.sidebar.toggle(
-    "Split office cost",
-    value=False,
-    key="split_office_cost",
-    help=(
-        "Making the adjustments according to following rules:\n"
-        "- Calcualte the sales (after the custom adjustments if set to true) for each cost center for every period\n"
-        "- Split the cost for all the financial accounts that is booked as head office based on projects sales percentage\n"
-        "- Note: the project's head offices are project-specific, for example head office sushibar belongs to sushibar project, not head office\n"
-    ),
-    disabled=True,
-)
 
 search_btn = st.sidebar.button("Search")
 

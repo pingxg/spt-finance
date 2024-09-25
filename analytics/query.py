@@ -308,6 +308,83 @@ def query_sales_data(department_name=None, start_str=None, end_str=None, timefra
 
 
 
+@st.cache_data(ttl=600)
+def query_factory_sales_data(department_name=None, start_str=None, end_str=None, timeframe="quarter"):
+    timeframe = timeframe.lower()
+    if 'q' in start_str.lower() or 'q' in end_str.lower():
+        timeframe = 'quarter'
+    elif 'm' in start_str.lower() or 'm' in end_str.lower():
+        timeframe = 'month'
+    else:
+        timeframe = 'year'
+
+    with session_scope() as session:
+        query = session.query(
+            SalesData.date, 
+            Location.short_name.label('location_name'),
+            SalesData.product_catagory,
+            SalesData.unit,
+            SalesData.amount,
+            SalesData.quantity,
+            Manager.name.label('manager'),
+            Location.city,
+            Location.country,
+            Location.status,
+        ).join(
+            Location, SalesData.location_internal_id == Location.id
+        ).join(
+            Manager, Location.op_manager_id == Manager.id
+        ).join(
+            Department, Location.department_id == Department.id
+        )
+        if department_name is not None:
+            query = query.filter(Location.department.has(name=department_name))
+
+        # Assuming start_str and end_str are provided in the format "YYYY" for year, "YYYY-QX" for quarters,
+        # and "YYYY-MM" for months, you can split these strings to extract the numerical values for year, quarter, and month.
+        if start_str is not None:
+            if timeframe == "quarter":
+                year, quarter = map(int, start_str.split('-Q'))
+                query = query.filter(
+                    (extract('year', SalesData.date) > year) | 
+                    ((extract('year', SalesData.date) == year) & 
+                    (((extract('month', SalesData.date) - 1) // 3 + 1) >= quarter))
+                )
+            elif timeframe == "month":
+                year, month = map(int, start_str.split('-M'))
+                query = query.filter(
+                    (extract('year', SalesData.date) > year) | 
+                    ((extract('year', SalesData.date) == year) & 
+                    (extract('month', SalesData.date) >= month))
+                )
+            else:  # Assuming start_str is just a year here
+                query = query.filter(extract('year', SalesData.date) >= int(start_str))
+        if department_name is not None:
+            query = query.filter(Location.department.has(name=department_name))
+            
+        if end_str is not None:
+            if timeframe == "quarter":
+                year, quarter = map(int, end_str.split('-Q'))
+                query = query.filter(
+                    (extract('year', SalesData.date) < year) | 
+                    ((extract('year', SalesData.date) == year) & 
+                    (((extract('month', SalesData.date) - 1) // 3 + 1) <= quarter))
+                )
+            elif timeframe == "month":
+                year, month = map(int, end_str.split('-M'))
+                query = query.filter(
+                    (extract('year', SalesData.date) < year) | 
+                    ((extract('year', SalesData.date) == year) & 
+                    (extract('month', SalesData.date) <= month))
+                )
+            else:  # Assuming end_str is just a year here
+                query = query.filter(extract('year', SalesData.date) <= int(end_str))
+        results = query.all()
+        
+
+    return results
+
+
 
 
 @st.cache_data(ttl=600)
@@ -358,9 +435,11 @@ def prepare_turnover_structure_data(df, department_name=None, pivot_by='departme
             .sort_values(by=['period','amount_calc'], kind='mergesort', ascending=[True, False])
         pivot_df = df_grouped_sales.pivot_table(index='period', columns=pivot_by, values='amount_calc', aggfunc='sum')
     else:
-        df_grouped_sales = df.groupby(['period', pivot_by])['amount'].sum()\
+        df_grouped_sales = df.loc[df['account_type'].isin(["sales", "other income"])]\
+            .groupby(['period', pivot_by])['amount'].sum()\
             .reset_index()\
             .sort_values(by=['period','amount'], kind='mergesort', ascending=[True, False])
+
         pivot_df = df_grouped_sales.pivot_table(index='period', columns=pivot_by, values='amount', aggfunc='sum')
     # Pivoting the data with 'period' as index, 'location' as columns, and 'amount' as values
     pivot_df.reset_index(inplace=True)  # Resetting the index if you want 'period' as a column

@@ -13,6 +13,10 @@ st.set_page_config(
 
 DEPARTMENT_NAME = "Food Plant"
 
+# # Initialize the session state variable for the radio selection if it doesn't exist
+if 'pivot_by' not in st.session_state:
+    st.session_state['pivot_by'] = "Location name"  # Set a default selection.
+
 st.markdown("# Factory Project")
 st.sidebar.header("Factory Project")
 
@@ -46,6 +50,20 @@ report_type = st.sidebar.radio(
         "- Rest of the staff cost multiply by a factor according to country: (FI:1,37; EE:1,35; NO:1,30)\n"
     )
 )
+
+
+options = ["Location name", "Product category"]
+
+selected_option = st.sidebar.radio(
+    "Select turnover filter:", 
+    options=options, 
+    key='pivot_by',  # Use a consistent key for the widget.
+    index=options.index(st.session_state['pivot_by']) if st.session_state['pivot_by'] in options else 0,  # Set the default selection based on the session state.
+    horizontal=True, 
+    help="Note: Turnover figures may differ from the performance analysis because the performance analysis's amounts are calculated on a weekly basis, while turnover data is calculated monthly."
+)
+
+
 custom_adjustment = st.sidebar.toggle(
     "Custom adjustment",
     value=True,
@@ -75,11 +93,60 @@ split_office_cost = st.sidebar.toggle(
 
 search_btn = st.sidebar.button("Search")
 
+# if search_btn:
+#     po_tab1, po_tab2 = st.tabs(["Figure", "Data"])
+#     df = query_performance_overview_data(department_name=DEPARTMENT_NAME, report_type=report_type, start_str=start_str, end_str=end_str, timeframe=timeframe, custom_adjustment=custom_adjustment)
+#     df = prepare_performance_overview_data(df)
+#     with po_tab1:
+#         st.plotly_chart(make_performance_overview_graph(df), use_container_width=True)
+#     with po_tab2:
+#         st.dataframe(df, use_container_width=True, hide_index=True)
+
+
 if search_btn:
-    po_tab1, po_tab2 = st.tabs(["Figure", "Data"])
-    df = query_performance_overview_data(department_name=DEPARTMENT_NAME, report_type=report_type, start_str=start_str, end_str=end_str, timeframe=timeframe, custom_adjustment=custom_adjustment)
-    df = prepare_performance_overview_data(df)
-    with po_tab1:
-        st.plotly_chart(make_performance_overview_graph(df), use_container_width=True)
-    with po_tab2:
-        st.dataframe(df, use_container_width=True, hide_index=True)
+    df = query_performance_overview_data(
+        department_name=DEPARTMENT_NAME,
+        report_type=report_type,
+        start_str=start_str,
+        end_str=end_str,
+        timeframe=timeframe,
+        custom_adjustment=custom_adjustment,
+        split_office_cost=split_office_cost,
+    )
+    
+    st.subheader(f'Performance Analysis{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    po_fig_tab, po_data_tab = st.tabs(["Figure", "Data"])
+    po_df = prepare_performance_overview_data(df, denominator="sales")
+    with po_fig_tab:
+        st.plotly_chart(make_performance_overview_graph(po_df), use_container_width=True)
+    with po_data_tab:
+        st.dataframe(po_df, use_container_width=True, hide_index=True)
+
+    st.subheader(f'Turnover Breakdown{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    ts_fig_tab, ts_data_tab = st.tabs(["Figure", "Data"])
+    ts_df = prepare_turnover_structure_data(df, department_name=DEPARTMENT_NAME, pivot_by=st.session_state['pivot_by'].lower().replace(" ", "_"))
+    with ts_fig_tab:
+        st.plotly_chart(make_turnover_structure_graph(ts_df, department_name=DEPARTMENT_NAME), use_container_width=True)
+    with ts_data_tab:
+        st.dataframe(ts_df, use_container_width=True, hide_index=True)
+
+    st.subheader(f'Cost Structure{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    cs_fig1_tab, cs_fig2_tab, cs_data_tab = st.tabs(["Cost to Sales Ratio", "Cost to Total Cost Ratio", "Data"])
+    
+    with cs_fig1_tab:
+        cs_df = prepare_performance_overview_data(df, denominator="sales")
+        st.plotly_chart(make_cost_structure_graph(cs_df, denominator="sales"), use_container_width=True)
+    with cs_fig2_tab:
+        cs_df = prepare_performance_overview_data(df, denominator="costs")
+        st.plotly_chart(make_cost_structure_graph(cs_df, denominator="costs"), use_container_width=True)
+    with cs_data_tab:
+        st.dataframe(cs_df, use_container_width=True, hide_index=True)
+
+    st.subheader(f'Cost Details{" - " + DEPARTMENT_NAME if DEPARTMENT_NAME is not None else ""}')
+    cdd_fig_tab, cdd_data_tab = st.tabs([ "Cumulative Cost Details Breakdown", "Data"])
+    cdd_df = df.copy()
+    with cdd_fig_tab:
+        processed_df = prepare_cost_structure_cumulative_icicle(cdd_df)
+        st.plotly_chart(make_cost_structure_cumulative_icicle_graph(processed_df), use_container_width=True)
+    with cdd_data_tab:
+        st.dataframe(cdd_df, use_container_width=True, hide_index=True)
