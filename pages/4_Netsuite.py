@@ -40,14 +40,21 @@ def create_netsuite_session():
         return None
 
 
-# Run SuiteQL queries to retrieve data from NetSuite
 @st.cache_data
-def run_suiteql(query):
+def run_suiteql(query, limit=None, offset=None):
     session = create_netsuite_session()
     if not session:
         return None
 
+    # Update URL with limit and offset parameters if provided
     url = f"{BASE_URL}/query/v1/suiteql"
+    if limit is not None and offset is not None:
+        url += f"?limit={limit}&offset={offset}"
+    elif limit is not None:
+        url += f"?limit={limit}"
+    elif offset is not None:
+        url += f"?offset={offset}"
+    
     headers = {"Prefer": "transient", "Content-Type": "application/json"}
     payload = {"q": query}
 
@@ -65,41 +72,33 @@ def run_suiteql(query):
         return None
 
 
-# # Retrieve balance sheet data
-# @st.cache_data
-# def get_balance_sheet_data(period):
-#     query = f"""
-#     SELECT
-#         acct.name AS account_name,
-#         acct.number AS account_number,
-#         SUM(trx.amount) AS amount
-#     FROM
-#         transaction trx
-#     JOIN
-#         account acct ON (trx.account = acct.id)
-#     WHERE
-#         acct.type IN (
-#             'Bank', 'AccountsReceivable', 'OtherCurrentAsset', 'FixedAsset',
-#             'OtherAsset', 'AccountsPayable', 'CreditCard', 'OtherCurrentLiability',
-#             'LongTermLiability', 'Equity'
-#         )
-#         AND trx.postingperiod = '{period}'
-#     GROUP BY
-#         acct.name, acct.number
-#     ORDER BY
-#         acct.number
-
-#     """
-#     return run_suiteql(query)
-
-
 # Retrieve balance sheet data
 @st.cache_data
 def get_balance_sheet_data(period):
     query = f"""
-SELECT CONCAT(firstname,lastname) as fullname FROM employee
+    SELECT
+        acct.name AS account_name,
+        acct.number AS account_number,
+        SUM(trx.amount) AS amount
+    FROM
+        transaction trx
+    JOIN
+        account acct ON (trx.account = acct.id)
+    WHERE
+        acct.type IN (
+            'Bank', 'AccountsReceivable', 'OtherCurrentAsset', 'FixedAsset',
+            'OtherAsset', 'AccountsPayable', 'CreditCard', 'OtherCurrentLiability',
+            'LongTermLiability', 'Equity'
+        )
+        AND trx.postingperiod = '{period}'
+    GROUP BY
+        acct.name, acct.number
+    ORDER BY
+        acct.number
+
     """
     return run_suiteql(query)
+
 
 
 # Retrieve income statement data
@@ -164,6 +163,43 @@ def display_charts(df, title):
         st.bar_chart(chart_data)
 
 
+
+@st.cache_data
+def get_test_data():
+    query = f"""
+    SELECT
+        *
+    FROM
+        transaction
+
+    """
+    return run_suiteql(query, limit=100)
+
+
+# @st.cache_data
+# def get_test_data(start_date='2023-01-01', end_date='2023-12-31'):
+#     query = f"""
+#     SELECT
+#         acc.name AS account_name,
+#         acc.type AS account_type,
+#         SUM(trx.amount) AS total_amount
+
+#     FROM
+#         transaction trx
+#         INNER JOIN account acc ON trx.account = acc.id
+
+#     WHERE
+#         trx.recordtype IN ('invoice', 'journalentry')
+#         AND trx.trandate BETWEEN TO_DATE('{start_date}', 'YYYY-MM-DD') AND TO_DATE('{end_date}', 'YYYY-MM-DD')
+
+#     GROUP BY
+#         acc.name, acc.type
+
+#     ORDER BY
+#         acc.type, acc.name
+#     """
+#     return run_suiteql(query)
+
 # Main function for the Streamlit app
 def main():
     st.set_page_config(page_title="Company Financial Dashboard", layout="wide")
@@ -182,17 +218,18 @@ def main():
 
     # Add a loading indicator
     with st.spinner("Fetching data..."):
-        st.header("Balance Sheet")
-        balance_data = get_balance_sheet_data(selected_period)
-        balance_df = data_to_dataframe(balance_data)
-        display_financial_statement(balance_df, "Balance Sheet")
-        display_charts(balance_df, "Balance Sheet")
+        # st.header("Balance Sheet")
+        # balance_data = get_balance_sheet_data(selected_period)
+        # balance_df = data_to_dataframe(balance_data)
+        # display_financial_statement(balance_df, "Balance Sheet")
+        # display_charts(balance_df, "Balance Sheet")
 
         # st.header("Income Statement")
         # income_data = get_income_statement_data(selected_period)
         # income_df = data_to_dataframe(income_data)
         # display_financial_statement(income_df, "Income Statement")
         # display_charts(income_df, "Income Statement")
+        st.dataframe(data_to_dataframe(get_test_data()))
 
     # Provide additional information or help sections
     st.sidebar.title("Help & Information")
