@@ -18,7 +18,7 @@ To run this project locally, follow these steps:
 
 The application may require access to sensitive information, such as API keys, database credentials, and other secrets. It is crucial to handle these securely and never commit them to your version control system.
 
-We recommend using environment variables or a secret management tool to manage your secrets. For development purposes, you can use a `.streamlit/secrets.toml` file to store your environment variables locally. **Never** commit this file to your repository by adding .streatmlit to your .gitignore file.
+We recommend using environment variables or a secret management tool to manage your secrets. For development purposes, you can use a `.streamlit/secrets.toml` file to store your environment variables locally. **Never** commit this file to your repository by adding `.streamlit` to your `.gitignore` file.
 
 For example, to set up environment variables in a `.streamlit/secrets.toml` file:
 
@@ -46,7 +46,31 @@ conn = st.connection('db', type='sql')
 # Everything is accessible via the st.secrets dict:
 st.secrets["db_username"]
 st.secrets["db_password"]
+```
 
+Alternatively, you can use a `.env` file to manage your environment variables:
+
+```
+NETSUITE_ACCOUNT_ID=your_account_id
+NETSUITE_CONSUMER_KEY=your_consumer_key
+NETSUITE_CONSUMER_SECRET=your_consumer_secret
+NETSUITE_TOKEN_ID=your_token_id
+NETSUITE_TOKEN_SECRET=your_token_secret
+```
+
+And load them in your application:
+
+```python
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+ACCOUNT_ID = os.getenv("NETSUITE_ACCOUNT_ID")
+CONSUMER_KEY = os.getenv("NETSUITE_CONSUMER_KEY")
+CONSUMER_SECRET = os.getenv("NETSUITE_CONSUMER_SECRET")
+TOKEN_ID = os.getenv("NETSUITE_TOKEN_ID")
+TOKEN_SECRET = os.getenv("NETSUITE_TOKEN_SECRET")
 ```
 
 ## Project Structure
@@ -79,10 +103,16 @@ spt-finance/
 │ ├── graphs.py - Functions to create various graphs.
 │ └── layouts.py - Defines layout/styling for the visuals.
 │
-└── utils/
-├── __init__.py
-└── helper_functions.py - Utility functions for common tasks.
+└── netsuite_api.py - Functions to interact with NetSuite API.
 ```
+
+## Running the NetSuite Integration
+
+To run the NetSuite integration, follow these steps:
+
+1. Ensure you have set up your environment variables as described in the "Handling Secrets" section.
+2. Navigate to the project directory and run the NetSuite page:
+    ```streamlit run pages/4_Netsuite.py```
 
 ## Contributing
 

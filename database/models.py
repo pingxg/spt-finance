@@ -34,12 +34,13 @@ class Location(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(45))
     store_name = Column(String(45))
+    sok_location_id = Column(String(7))  # New field
     short_name = Column(String(45))
-    status = Column(String(45))
-    active = Column(Boolean)
+    status = Column(String(45), nullable=True)
+    active = Column(Boolean, default=True)
     department_id = Column(Integer, ForeignKey('master.department.id'))
     class_id = Column(Integer)
-    basware_matching = Column(String(45))
+    basware_matching = Column(String(100), nullable=True)  # Updated field length
     basware_approver = Column(String(45))
     customer_id = Column(Integer)
     op_manager_id = Column(Integer, ForeignKey('master.manager.id'))
@@ -48,13 +49,27 @@ class Location(Base):
     email = Column(String(45))
     phone = Column(String(45))
     address = Column(String(45))
-    post_code = Column(String(45))
-    city = Column(String(45))
     country = Column(String(45))
-    maraplan_location_name = Column(String(45))
+    maraplan_location_name = Column(String(45), nullable=True)
+    smp_path = Column(String(120), nullable=True)  # New field
     
     department = relationship('Department', backref='locations')
+    sok_locations = relationship('SokLocation', backref='location', foreign_keys='SokLocation.sok_location_id')  # New relationship
 
+
+class SokLocation(Base):
+    __tablename__ = 'sok_location'
+    __table_args__ = {'schema': 'master'}
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), unique=True)
+    location_id = Column(Integer, ForeignKey('master.location.id'), nullable=False)  # Foreign key to Location
+    sok_location_id = Column(String(7), ForeignKey('master.location.sok_location_id'), nullable=False)  # Foreign key to sok_location_id in Location
+    customer_id = Column(Integer, nullable=False)
+    po = Column(String(45), unique=True, nullable=True)
+    type = Column(String(45), default='on-site', nullable=False)
+    is_commision = Column(Boolean, default=True, nullable=False)
+    region = Column(String(45), nullable=True)
 
 class Manager(Base):
     __tablename__ = 'manager'
